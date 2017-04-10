@@ -10,7 +10,7 @@
 //    { propid:'root', type:'array', value:['rect']}
 //];
 
-const DOC_PREFIX = "randomdoc6_";
+const DOC_PREFIX = "randomdoc8_";
 const DOC_CHANNEL = DOC_PREFIX+"document";
 const CHANGE_CHANNEL = DOC_PREFIX+"changes";
 
@@ -186,8 +186,6 @@ class SharedObjectStore {
                 props:props
             }
         });
-        console.log("the past is",history);
-        console.log("found root",rt);
         return rt;
     }
 

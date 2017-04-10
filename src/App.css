@@ -1,3 +1,7 @@
 svg {
     background-color: black;
 }
+rect.selected {
+    stroke:white;
+    fill: blue;
+}

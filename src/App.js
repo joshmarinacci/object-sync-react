@@ -7,7 +7,9 @@ class App extends Component {
         super(props);
         this.store = SharedObjectStore.get();
         this.state = {
-            view: this.store.calculateCurrentView()
+            view: this.store.calculateCurrentView(),
+            selected:null,
+            pressed:false
         };
         this.store.onChange((view)=>{
             this.setState({view:view});
@@ -63,15 +65,13 @@ class App extends Component {
         var root = this.renderToTree(this.state.view);
         return (
             <div>
-                <ul>{root}</ul>
                 <button onClick={this.moveBack.bind(this)}>move left</button>
                 <button onClick={this.move.bind(this)}>move right</button>
                 <button onClick={this.send.bind(this)}>send</button>
                 <button onClick={this.createRect.bind(this)}>+ rect</button>
                 <button onClick={this.deleteFirstRect.bind(this)}>- rect</button>
-                <svg>
-                    {this.renderToSVG(this.state.view)}
-                </svg>
+                {this.renderToSVG(this.state.view)}
+                <ul>{root}</ul>
             </div>
         );
     }
@@ -93,13 +93,54 @@ class App extends Component {
     }
 
     renderToSVG(view) {
-        return view.values.map((node,i) => {
+        return <svg
+            onMouseUp={this.clearMouse.bind(this)}
+        >{
+        view.values.map((node,i) => {
+            var clss = "";
+            if(this.state.selected) {
+                if(this.state.selected.id == node.id) {
+                    clss = "selected";
+                }
+            }
             return <rect
                 key={i}
+                className={clss}
                 x={node.props.x.value}
                 y={node.props.y.value}
-                width="50px" height="50px" fill="red"/>
-        });
+                width="50px" height="50px" fill="red"
+                onClick={this.clickRect.bind(this,node)}
+
+                onMouseDown={this.pressRect.bind(this,node)}
+                onMouseMove={this.dragRect.bind(this,node)}
+                onMouseUp={this.releaseRect.bind(this,node)}
+            />
+        })}</svg>;
+    }
+    clickRect(node,e) {
+        this.setState({
+            selected:node
+        })
+    }
+
+    pressRect(node,e) {
+        this.setState({pressed:true, px: e.clientX, py: e.clientY});
+    }
+    dragRect(node,e) {
+        if(this.state.pressed === true) {
+            var dx = e.clientX - this.state.px;
+            var dy = e.clientY - this.state.py;
+            this.store.setProperty(node.props.x.id, node.props.x.value+dx,'number');
+            this.store.setProperty(node.props.y.id, node.props.y.value+dy,'number');
+            this.setState({px: e.clientX, py: e.clientY});
+
+        }
+    }
+    releaseRect(node,e) {
+        this.setState({pressed:false});
+    }
+    clearMouse() {
+        this.setState({pressed:false, px:0, py:0});
     }
 }
 

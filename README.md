@@ -11,19 +11,17 @@ present buffer (if needed)
 * done: load a second client. it should be able to reload everything and make changes on it's own
 * done: load a third client. it should still work.
 * done: reload the first client, it should come back to the current state
-
 * done: button to create a new rect.  adds a set of properties for the rect + x,y,w,h. also adds to 
 the document channel
-
 * done: use a document id as a channel prefix
 * done: handle the case where the doc is empty
+* done: button to delete a rect. removes from the document channel.
+* done: make a mouse handler to move the rectangle around by putting changes into the future buffer 
+and triggering a refresh
 
-* button to delete a rect. removes from the document channel.
-
-
-* make a mouse handler to move the rectangle around by putting changes into the future buffer and triggering a refresh
 * make future buffer coalesce events if the same propid
 * when mouse is released flush future buffer to the present buffer and network
+* add an indicator for the size of the future buffer to show when things are sending
 
 * press button to disconnect from the network.
 * move the rect. should still work.
