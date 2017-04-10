@@ -45,7 +45,6 @@ class App extends Component {
         root_val.push(rect.propid);
         console.log('new root value = ',root_val);
         this.store.setProperty(root.propid,root_val,'array');
-
     }
 
     render() {
