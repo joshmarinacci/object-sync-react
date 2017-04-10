@@ -2,15 +2,15 @@
  * Created by josh on 4/10/17.
  */
 
-var INITIAL_DOC_STATE = ["root","rect","x","y"];
-var INITIAL_CHANGES = [
-    { propid:'x1', value:55, type:'number' },
-    { propid:'y1', value:35, type:'number' },
-    { propid:'rect', type:'map', value:{x:'x1',y:'y1'}},
-    { propid:'root', type:'array', value:['rect']}
-];
+//var INITIAL_DOC_STATE = ["root","rect","x","y"];
+//var INITIAL_CHANGES = [
+//    { propid:'x1', value:55, type:'number' },
+//    { propid:'y1', value:35, type:'number' },
+//    { propid:'rect', type:'map', value:{x:'x1',y:'y1'}},
+//    { propid:'root', type:'array', value:['rect']}
+//];
 
-const DOC_PREFIX = "randomdoc2_";
+const DOC_PREFIX = "randomdoc6_";
 const DOC_CHANNEL = DOC_PREFIX+"document";
 const CHANGE_CHANNEL = DOC_PREFIX+"changes";
 
@@ -127,14 +127,29 @@ class SharedObjectStore {
         var history = this._past.concat(this._future).reverse();
         return history.find((p)=>p.propid === propid);
     }
+    findAllProperties() {
+        console.log("current doc is ",this._doc);
+        return this._doc.map((propid)=>{
+            return this.getProperty(propid)
+        });
+    }
     setProperty(propid,value,type) {
         this._future.push(({
             propid:propid,
             value:value,
             type:type
         }));
-        var view = this.calculateCurrentView();
-        this.listeners.forEach(cb => cb(view));
+        this._fireChange();
+    }
+    deleteProperty(propid) {
+        this._doc.filter((id)=> id !== propid);
+        this.pubnub.publish({
+            channel:DOC_CHANNEL,
+            message: {
+                props: this._doc
+            }
+        });
+        this._fireChange();
     }
 
     calculateCurrentView() {
@@ -177,19 +192,39 @@ class SharedObjectStore {
     }
 
 
-    createMap() {
-        return {
-            propid: this._generateRandomIdWithPrefix('map'),
-            type:'map',
-            value:{}
-        }
+    createMap(value) {
+        var propid = this._generateRandomIdWithPrefix('map');
+        var prop = {
+            propid: propid,
+            type: 'map',
+            value: value
+        };
+        this._future.push(prop);
+        this._doc.push(propid);
+        this.pubnub.publish({
+            channel:DOC_CHANNEL,
+            message: {
+                props: this._doc
+            }
+        });
+        return prop;
     }
-    createNumber() {
-        return {
-            propid: this._generateRandomIdWithPrefix('number'),
-            type:'number',
-            value:0
-        }
+    createNumber(value) {
+        var propid = this._generateRandomIdWithPrefix('number');
+        var prop = {
+            propid:propid,
+            value:value,
+            type:'number'
+        };
+        this._future.push(prop);
+        this._doc.push(propid);
+        this.pubnub.publish({
+            channel:DOC_CHANNEL,
+            message: {
+                props: this._doc
+            }
+        });
+        return prop;
     }
 
     _generateRandomIdWithPrefix(prefix) {

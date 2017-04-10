@@ -28,23 +28,35 @@ class App extends Component {
         store.sendToNetwork();
     }
     createRect() {
-        //make x
-        var x = this.store.createNumber();
-        this.store.setProperty(x.propid,0,'number');
-        //make y
-        var y = this.store.createNumber();
-        this.store.setProperty(y.propid,0,'number');
-
-        //make rect
-        var rect = this.store.createMap();
-        this.store.setProperty(rect.propid, {x: x.propid, y: y.propid},'map');
+        //make the rect and parts
+        var x = this.store.createNumber(0);
+        var y = this.store.createNumber(0);
+        var rect = this.store.createMap({x: x.propid, y: y.propid});
 
         //make root
         var root = this.store.getProperty('root');
         var root_val = root.value.slice();
         root_val.push(rect.propid);
-        console.log('new root value = ',root_val);
         this.store.setProperty(root.propid,root_val,'array');
+        console.log('new root value = ',root_val);
+    }
+
+    deleteFirstRect() {
+        //find first rect
+        var props = this.store.findAllProperties();
+        console.log('all props is',props);
+        var rect = props.find((prop)=>prop.type=='map' && prop.value.x);
+        if(rect) {
+            console.log("found a rect",rect);
+            //remove rect from the doc stream
+            this.store.deleteProperty(rect.propid);
+            //remove rect from the root
+            var root = this.store.getProperty('root');
+            var root_val = root.value.slice();
+            root_val = root_val.filter((id) => id!=rect.propid);
+            this.store.setProperty(root.propid,root_val,'array');
+            console.log('new root value = ',root_val);
+        }
     }
 
     render() {
@@ -56,6 +68,7 @@ class App extends Component {
                 <button onClick={this.move.bind(this)}>move right</button>
                 <button onClick={this.send.bind(this)}>send</button>
                 <button onClick={this.createRect.bind(this)}>+ rect</button>
+                <button onClick={this.deleteFirstRect.bind(this)}>- rect</button>
                 <svg>
                     {this.renderToSVG(this.state.view)}
                 </svg>
