@@ -10,9 +10,12 @@ var INITIAL_CHANGES = [
     { propid:'root', type:'array', value:['rect']}
 ];
 
+const DOC_PREFIX = "randomdoc2_";
+const DOC_CHANNEL = DOC_PREFIX+"document";
+const CHANGE_CHANNEL = DOC_PREFIX+"changes";
+
 var _store = null;
-var DOC_CHANNEL = "document";
-var CHANGE_CHANNEL = "changes";
+
 import PubNub from "pubnub";
 
 class SharedObjectStore {
@@ -30,6 +33,15 @@ class SharedObjectStore {
 
 
         this.pubnub.history({channel:DOC_CHANNEL},(status,hist)=>{
+            if(status.error) {
+                console.log("MAJOR ERROR, could not retrieve doc channel history");
+            }
+            console.log(hist);
+            if(hist.messages.length <= 0) {
+                console.log("EMPTY history. probably a new doc");
+                return this._initNewDoc();
+            }
+
             var objs = hist.messages.slice().pop().entry.props;
             this._setDocument(objs);
             this.pubnub.history({channel:CHANGE_CHANNEL}, (status, hist) => {
@@ -43,16 +55,21 @@ class SharedObjectStore {
             message: this.processIncoming.bind(this)
         }));
         this.pubnub.subscribe({channels:[DOC_CHANNEL,CHANGE_CHANNEL]});
-
-        //this.pubnub.publish({channel:DOC_CHANNEL, message:{props:INITIAL_DOC_STATE}})
-        //this.pubnub.publish({channel:CHANGE_CHANNEL, message:{changes:INITIAL_CHANGES}});
-        //this._setDocument(INITIAL_DOC_STATE);
-        //this._initHistory(INITIAL_CHANGES);
-
         this.rootID = 'root';
-
     }
 
+    _initNewDoc() {
+        console.log("initing a new doc");
+        var initial_doc = ["root"];
+        this.pubnub.publish({channel:DOC_CHANNEL,
+            message:{props:initial_doc}});
+        this._setDocument(initial_doc);
+        this.setProperty('root',[],'array');
+    }
+    _fireChange() {
+        var view = this.calculateCurrentView();
+        this.listeners.forEach(cb => cb(view));
+    }
     _setDocument(objs) {
         console.log('the properties we must track are',objs);
         this._doc = objs;

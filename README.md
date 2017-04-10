@@ -15,6 +15,9 @@ present buffer (if needed)
 * done: button to create a new rect.  adds a set of properties for the rect + x,y,w,h. also adds to 
 the document channel
 
+* done: use a document id as a channel prefix
+* done: handle the case where the doc is empty
+
 * button to delete a rect. removes from the document channel.
 
 
