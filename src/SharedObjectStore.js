@@ -9,6 +9,7 @@ import PubNub from "pubnub";
 
 class SharedObjectStore {
     constructor() {
+        this.listeners = [];
         this._past = [];
         this._present = [];
         this._future = [];
@@ -55,22 +56,38 @@ class SharedObjectStore {
         this._past = changes;
     }
 
+    onChange(cb) {
+        this.listeners.push(cb);
+    }
+
+    getProperty(propid) {
+        var history = this._past.concat(this._future).reverse();
+        return history.find((p)=>p.propid === propid);
+    }
+    setProperty(propid,value,type) {
+        this._future.push(({
+            propid:propid,
+            value:value,
+            type:type
+        }));
+        var view = this.calculateCurrentView();
+        this.listeners.forEach(cb => cb(view));
+    }
+
     calculateCurrentView() {
-        var root = this._past.find((p)=>p.propid == this.rootID);
+        var history = this._past.concat(this._future).reverse();
+
+        var root = history.find((p)=>p.propid == this.rootID);
         var rt = {
             id:root.propid,
-            type:root.type,
+            type:root.type
         };
         rt.values = root.value.map((name)=>{
-            var prop = this._past.find((pp)=>pp.propid === name);
-            console.log("got the prop",prop);
+            var prop = history.find((pp)=>pp.propid === name);
             var props = {};
             Object.keys(prop.value).map((name)=>{
-                console.log("looking for",name);
                 var id = prop.value[name];
-                console.log("id = ",id);
-                var att = this._past.find((pp)=>pp.propid === id);
-                console.log("got att", att);
+                var att = history.find((pp)=>pp.propid === id);
                 props[name] = {
                     name:name,
                     id:att.propid,
@@ -84,8 +101,8 @@ class SharedObjectStore {
                 props:props
             }
         });
+        console.log("the past is",history);
         console.log("found root",rt);
-
         return rt;
     }
 }

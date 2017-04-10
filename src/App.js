@@ -3,22 +3,34 @@ import './App.css';
 var SharedObjectStore = require("./SharedObjectStore");
 
 class App extends Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            view: SharedObjectStore.get().calculateCurrentView()
+        };
+        SharedObjectStore.get().onChange((view)=>{
+            this.setState({view:view});
+        });
+    }
+    move() {
+        var store = SharedObjectStore.get();
+        var prop = store.getProperty('x1');
+        store.setProperty('x1',prop.value+10,'number');
+    }
     render() {
-        var store= SharedObjectStore.get();
-        var view = store.calculateCurrentView();
-        var root = this.renderToTree(view);
+        var root = this.renderToTree(this.state.view);
         return (
             <div>
                 <ul>{root}</ul>
+                <button onClick={this.move.bind(this)}>move</button>
                 <svg>
-                    {this.renderToSVG(view)}
+                    {this.renderToSVG(this.state.view)}
                 </svg>
             </div>
         );
     }
 
     renderToTree(view) {
-        console.log("the initial view is",view);
         var nodes = view.values.map((ch,i)=>{
             var props = Object.keys(ch.props).map((name,i)=>{
                 var prop = ch.props[name];

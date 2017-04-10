@@ -4,8 +4,13 @@
 * done: populate the history buffer
 * done: generate current view from all three buffers
 * done: render the current view using react + svg
+
+* press a button to make the main rect move
+* press another button to flush to the network. confirm the other side gets it.
+
 * make a mouse handler to move the rectangle around by putting changes into the future buffer and triggering a refresh
 * when mouse is released flush future buffer to the present buffer and network
+
 * listen for network changes. use them to fill the history buffer and remove from the present buffer (if needed)
 * load a second client. it should be able to reload everything and make changes on it's own
 * load a third client. it should still work.
