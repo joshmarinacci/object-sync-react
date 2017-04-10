@@ -2,6 +2,14 @@
  * Created by josh on 4/10/17.
  */
 
+var INITIAL_DOC_STATE = ["root","rect","x","y"];
+var INITIAL_CHANGES = [
+    { propid:'x1', value:55, type:'number' },
+    { propid:'y1', value:35, type:'number' },
+    { propid:'rect', type:'map', value:{x:'x1',y:'y1'}},
+    { propid:'root', type:'array', value:['rect']}
+];
+
 var _store = null;
 var DOC_CHANNEL = "document";
 var CHANGE_CHANNEL = "changes";
@@ -20,32 +28,26 @@ class SharedObjectStore {
             subscribeKey:"sub-c-19b3c544-1e22-11e7-a9ec-0619f8945a4f"
         });
 
-        /*
-        this.pubnub.getHistory(DOC_CHANNEL,(status,hist)=>{
-            console.log("got the doc",status,hist);
-            var objs = hist[0];
-            console.log('the current objects are',objs);
+
+        this.pubnub.history({channel:DOC_CHANNEL},(status,hist)=>{
+            var objs = hist.messages.slice().pop().entry.props;
             this._setDocument(objs);
-            this.pubnub.getHistory(CHANGE_CHANNEL, (status, hist) => {
-                console.log("got the changes",status,hist);
-                var changes = hist[0];
-                console.log("the previous changes are", changes);
-                this._initHistory(changes);
+            this.pubnub.history({channel:CHANGE_CHANNEL}, (status, hist) => {
+                var changes = hist.messages;
+                this._initHistory(changes.slice());
             });
-        })*/
+        });
+
         this.pubnub.addListener(({
             status: (e) => console.log(e),
             message: this.processIncoming.bind(this)
         }));
         this.pubnub.subscribe({channels:[DOC_CHANNEL,CHANGE_CHANNEL]});
 
-        this._setDocument(["root","rect","x","y"]);
-        this._initHistory([
-            { propid:'x1', value:55, type:'number' },
-            { propid:'y1', value:35, type:'number' },
-            { propid:'rect', type:'map', value:{x:'x1',y:'y1'}},
-            { propid:'root', type:'array', value:['rect']}
-        ]);
+        //this.pubnub.publish({channel:DOC_CHANNEL, message:{props:INITIAL_DOC_STATE}})
+        //this.pubnub.publish({channel:CHANGE_CHANNEL, message:{changes:INITIAL_CHANGES}});
+        //this._setDocument(INITIAL_DOC_STATE);
+        //this._initHistory(INITIAL_CHANGES);
 
         this.rootID = 'root';
 
@@ -57,8 +59,14 @@ class SharedObjectStore {
     }
 
     _initHistory(changes) {
-        console.log('the history is',changes);
-        this._past = changes;
+        this._past = [];
+        changes.forEach((msg)=>{
+            msg.entry.changes.forEach((ch) => {
+                this._past.push(ch);
+            })
+        });
+        var view = this.calculateCurrentView();
+        this.listeners.forEach(cb => cb(view));
     }
 
     sendToNetwork() {
@@ -116,6 +124,13 @@ class SharedObjectStore {
         var history = this._past.concat(this._future).reverse();
 
         var root = history.find((p)=>p.propid == this.rootID);
+        if(!root) {
+            return {
+                id:'root',
+                type:'array',
+                values:[],
+            }
+        }
         var rt = {
             id:root.propid,
             type:root.type

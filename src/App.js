@@ -17,6 +17,11 @@ class App extends Component {
         var prop = store.getProperty('x1');
         store.setProperty('x1',prop.value+10,'number');
     }
+    moveBack() {
+        var store = SharedObjectStore.get();
+        var prop = store.getProperty('x1');
+        store.setProperty('x1',prop.value-10,'number');
+    }
     send() {
         var store = SharedObjectStore.get();
         store.sendToNetwork();
@@ -27,7 +32,8 @@ class App extends Component {
         return (
             <div>
                 <ul>{root}</ul>
-                <button onClick={this.move.bind(this)}>move</button>
+                <button onClick={this.moveBack.bind(this)}>move left</button>
+                <button onClick={this.move.bind(this)}>move right</button>
                 <button onClick={this.send.bind(this)}>send</button>
                 <svg>
                     {this.renderToSVG(this.state.view)}
