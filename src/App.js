@@ -5,10 +5,11 @@ var SharedObjectStore = require("./SharedObjectStore");
 class App extends Component {
     constructor(props) {
         super(props);
+        this.store = SharedObjectStore.get();
         this.state = {
-            view: SharedObjectStore.get().calculateCurrentView()
+            view: this.store.calculateCurrentView()
         };
-        SharedObjectStore.get().onChange((view)=>{
+        this.store.onChange((view)=>{
             this.setState({view:view});
         });
     }
@@ -26,6 +27,26 @@ class App extends Component {
         var store = SharedObjectStore.get();
         store.sendToNetwork();
     }
+    createRect() {
+        //make x
+        var x = this.store.createNumber();
+        this.store.setProperty(x.propid,0,'number');
+        //make y
+        var y = this.store.createNumber();
+        this.store.setProperty(y.propid,0,'number');
+
+        //make rect
+        var rect = this.store.createMap();
+        this.store.setProperty(rect.propid, {x: x.propid, y: y.propid},'map');
+
+        //make root
+        var root = this.store.getProperty('root');
+        var root_val = root.value.slice();
+        root_val.push(rect.propid);
+        console.log('new root value = ',root_val);
+        this.store.setProperty(root.propid,root_val,'array');
+
+    }
 
     render() {
         var root = this.renderToTree(this.state.view);
@@ -35,6 +56,7 @@ class App extends Component {
                 <button onClick={this.moveBack.bind(this)}>move left</button>
                 <button onClick={this.move.bind(this)}>move right</button>
                 <button onClick={this.send.bind(this)}>send</button>
+                <button onClick={this.createRect.bind(this)}>+ rect</button>
                 <svg>
                     {this.renderToSVG(this.state.view)}
                 </svg>

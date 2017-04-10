@@ -12,6 +12,9 @@ present buffer (if needed)
 * done: load a third client. it should still work.
 * done: reload the first client, it should come back to the current state
 
+* done: button to create a new rect.  adds a set of properties for the rect + x,y,w,h. also adds to 
+the document channel
+
 * make a mouse handler to move the rectangle around by putting changes into the future buffer and triggering a refresh
 * when mouse is released flush future buffer to the present buffer and network
 
@@ -19,7 +22,6 @@ present buffer (if needed)
 * press button to disconnect from the network.
 * move the rect. should still work.
 * reconnect, changes should suddenly be reflected on the other screens automatically
-* button to create a new rect.  adds a set of properties for the rect + x,y,w,h. also adds to the document channel
 * should be able to move either rect, everything renders correctly
 * button to delete a rect. removes from the document channel.
 

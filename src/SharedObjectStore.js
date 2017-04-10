@@ -158,6 +158,26 @@ class SharedObjectStore {
         console.log("found root",rt);
         return rt;
     }
+
+
+    createMap() {
+        return {
+            propid: this._generateRandomIdWithPrefix('map'),
+            type:'map',
+            value:{}
+        }
+    }
+    createNumber() {
+        return {
+            propid: this._generateRandomIdWithPrefix('number'),
+            type:'number',
+            value:0
+        }
+    }
+
+    _generateRandomIdWithPrefix(prefix) {
+        return prefix+"_"+Math.floor(Math.random()*1000*1000);
+    }
 }
 
 module.exports = {
