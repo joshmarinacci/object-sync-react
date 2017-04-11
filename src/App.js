@@ -86,6 +86,7 @@ class App extends Component {
                 <div>present changes = {this.store.getPresentCount()}</div>
                 <div>past changes = {this.store.getPastCount()}</div>
                 <div>auto send status = {this.store.isAutoSendEnabled()?"true":"false"}</div>
+                <div>doc = {this.store._doc.join("  ")}</div>
                 <ul>{root}</ul>
             </div>
         );

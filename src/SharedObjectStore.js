@@ -10,7 +10,7 @@
 //    { propid:'root', type:'array', value:['rect']}
 //];
 
-const DOC_PREFIX = "randomdoc14_";
+const DOC_PREFIX = "randomdoc19_";
 const DOC_CHANNEL = DOC_PREFIX+"document";
 const CHANGE_CHANNEL = DOC_PREFIX+"changes";
 
@@ -43,8 +43,8 @@ class SharedObjectStore {
                 return this._initNewDoc();
             }
 
-            var objs = hist.messages.slice().pop().entry.props;
-            this._setDocument(objs);
+            var objs = hist.messages.slice().pop().entry.changes;
+            this._setDocument(objs[0].value);
             this.pubnub.history({channel:CHANGE_CHANNEL}, (status, hist) => {
                 var changes = hist.messages;
                 this._initHistory(changes.slice());
@@ -61,10 +61,13 @@ class SharedObjectStore {
 
     _initNewDoc() {
         console.log("initing a new doc");
-        var initial_doc = ["root"];
-        this.pubnub.publish({channel:DOC_CHANNEL,
-            message:{props:initial_doc}});
-        this._setDocument(initial_doc);
+        var initial_doc = {
+            propid:'doc',
+            value:['root'],
+            type:'array'
+        };
+        this._future.push(initial_doc);
+        this._setDocument(initial_doc.value);
         this.setProperty('root',[],'array');
     }
     _fireChange() {
@@ -112,6 +115,15 @@ class SharedObjectStore {
                 changes: this._future
             }
         });
+        var doc_changes = this._future.filter((ch)=>ch.propid === 'doc');
+        if(doc_changes.length > 0) {
+            this.pubnub.publish({
+                channel:DOC_CHANNEL,
+                message: {
+                    changes:doc_changes
+                }
+            })
+        }
 
         //move all items the present buffer
         this._future.forEach((change)=> {
@@ -124,7 +136,9 @@ class SharedObjectStore {
     processIncoming(env) {
         if(env.channel === CHANGE_CHANNEL) {
             env.message.changes.forEach((ch)=> {
+                //put this in the past
                 this._past.push(ch);
+                //remove from present if it's there
                 var n = this._present.findIndex(c => c.propid = ch.propid);
                 if (n >= 0) this._present.splice(n, 1);
             });
@@ -132,7 +146,9 @@ class SharedObjectStore {
             this.listeners.forEach(cb => cb(view));
         }
         if(env.channel === DOC_CHANNEL) {
-            console.log("got some doc changes",env);
+            env.message.changes.forEach((ch) => {
+                this._setDocument(ch.value);
+            })
         }
     }
 
@@ -171,12 +187,13 @@ class SharedObjectStore {
     }
     deleteProperty(propid) {
         this._doc = this._doc.filter((id)=> id !== propid);
-        this.pubnub.publish({
-            channel:DOC_CHANNEL,
-            message: {
-                props: this._doc
-            }
-        });
+        var doc_change = {
+            propid:'doc',
+            value:this._doc.slice(),
+            type:'array'
+        };
+        this._future.push(doc_change);
+        this.sendToNetwork();
         this._fireChange();
     }
 
@@ -201,11 +218,15 @@ class SharedObjectStore {
             Object.keys(prop.value).map((name)=>{
                 var id = prop.value[name];
                 var att = history.find((pp)=>pp.propid === id);
-                props[name] = {
-                    name:name,
-                    id:att.propid,
-                    type:att.type,
-                    value:att.value
+                if(!att) {
+                    console.log("WARNING:  could not find property for ",name, id);
+                } else {
+                    props[name] = {
+                        name: name,
+                        id: att.propid,
+                        type: att.type,
+                        value: att.value
+                    }
                 }
             });
             return {
@@ -226,12 +247,14 @@ class SharedObjectStore {
         };
         this._future.push(prop);
         this._doc.push(propid);
-        this.pubnub.publish({
-            channel:DOC_CHANNEL,
-            message: {
-                props: this._doc
-            }
-        });
+
+        var doc_change = {
+            propid:'doc',
+            value:this._doc.slice(),
+            type:'array'
+        };
+        this._future.push(doc_change);
+        this.sendToNetwork();
         return prop;
     }
 
