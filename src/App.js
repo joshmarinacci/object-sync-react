@@ -33,31 +33,28 @@ class App extends Component {
         //make the rect and parts
         var x = this.store.createNumber(0);
         var y = this.store.createNumber(0);
-        var rect = this.store.createMap({x: x.propid, y: y.propid});
+        var name = this.store.createString("my cool rect");
+        var rect = this.store.createMap({x: x.propid, y: y.propid, name:name.propid});
 
         //make root
         var root = this.store.getProperty('root');
         var root_val = root.value.slice();
         root_val.push(rect.propid);
         this.store.setProperty(root.propid,root_val,'array');
-        console.log('new root value = ',root_val);
     }
 
     deleteFirstRect() {
         //find first rect
-        var props = this.store.findAllProperties();
-        console.log('all props is',props);
-        var rect = props.find((prop)=>prop.type=='map' && prop.value.x);
+        var rect = this.state.selected;
         if(rect) {
-            console.log("found a rect",rect);
             //remove rect from the doc stream
-            this.store.deleteProperty(rect.propid);
+            this.store.deleteProperty(rect.id);
             //remove rect from the root
             var root = this.store.getProperty('root');
             var root_val = root.value.slice();
-            root_val = root_val.filter((id) => id!=rect.propid);
+            root_val = root_val.filter((id) => id!=rect.id);
             this.store.setProperty(root.propid,root_val,'array');
-            console.log('new root value = ',root_val);
+            this.setState({selected:null})
         }
     }
 
@@ -65,11 +62,13 @@ class App extends Component {
         var root = this.renderToTree(this.state.view);
         return (
             <div>
-                <button onClick={this.moveBack.bind(this)}>move left</button>
-                <button onClick={this.move.bind(this)}>move right</button>
-                <button onClick={this.send.bind(this)}>send</button>
-                <button onClick={this.createRect.bind(this)}>+ rect</button>
-                <button onClick={this.deleteFirstRect.bind(this)}>- rect</button>
+                <div>
+                    <button onClick={this.moveBack.bind(this)}>move left</button>
+                    <button onClick={this.move.bind(this)}>move right</button>
+                    <button onClick={this.send.bind(this)}>send</button>
+                    <button onClick={this.createRect.bind(this)}>+ rect</button>
+                    <button onClick={this.deleteFirstRect.bind(this)}>- rect</button>
+                </div>
                 {this.renderToSVG(this.state.view)}
                 <div>future changes = {this.store.getFutureCount()}</div>
                 <div>present changes = {this.store.getPresentCount()}</div>

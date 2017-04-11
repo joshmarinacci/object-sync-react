@@ -71,11 +71,11 @@ class SharedObjectStore {
         this.listeners.forEach(cb => cb(view));
     }
     _setDocument(objs) {
-        console.log('the properties we must track are',objs);
         this._doc = objs;
     }
 
     _initHistory(changes) {
+        console.log('history messages length',changes.length)
         this._past = [];
         changes.forEach((msg)=>{
             msg.entry.changes.forEach((ch) => {
@@ -155,7 +155,7 @@ class SharedObjectStore {
         this._fireChange();
     }
     deleteProperty(propid) {
-        this._doc.filter((id)=> id !== propid);
+        this._doc = this._doc.filter((id)=> id !== propid);
         this.pubnub.publish({
             channel:DOC_CHANNEL,
             message: {
@@ -226,6 +226,24 @@ class SharedObjectStore {
             propid:propid,
             value:value,
             type:'number'
+        };
+        this._future.push(prop);
+        this._doc.push(propid);
+        this.pubnub.publish({
+            channel:DOC_CHANNEL,
+            message: {
+                props: this._doc
+            }
+        });
+        return prop;
+    }
+
+    createString(value) {
+        var propid = this._generateRandomIdWithPrefix('string');
+        var prop = {
+            propid:propid,
+            value:value,
+            type:'string'
         };
         this._future.push(prop);
         this._doc.push(propid);
