@@ -153,6 +153,7 @@ class SharedObjectStore {
     }
 
     processIncoming(env) {
+        if(!this.fakeConnected) return console.log("Can't receive. disconnected!");
         if(env.channel === CHANGE_CHANNEL) {
             env.message.changes.forEach((ch)=> {
                 //put this in the past

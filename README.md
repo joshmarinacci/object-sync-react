@@ -23,11 +23,10 @@ and triggering a refresh
 * done: when mouse is released flush future buffer to the present buffer and network
 * done: add an indicator for the size of the future buffer to show when things are sending
 
-* press button to disconnect from the network.
-* move the rect. should still work.
-* reconnect, changes should suddenly be reflected on the other screens automatically
-* should be able to move either rect, everything renders correctly
+* done: press button to disconnect from the network.
+* done: move the rect. should still work.
+* done: reconnect, changes should suddenly be reflected on the other screens automatically
+* done: should be able to move either rect, everything renders correctly
 
 
-
-doc changes should be put into the 'future' queue as well. how to demarcate it? just a type on the event? make sure it is sent along with other property change events. queues contain history of changes as well as doc changes.  consider another property called doc which is an array of property ids. it's synced just like everything else, except that it is published a second time to the doc channel for quicker history access.
+* retrieve all changes made while off the network using history. have to reconcile. do this before flushing to the network. 
