@@ -26,6 +26,7 @@ class SharedObjectStore {
         this._future = [];
         this._doc = [];
         this.autoSend = true;
+        this.fakeConnected = true;
 
         this.pubnub = new PubNub({
             publishKey:"pub-c-119910eb-4bfc-4cfe-93c2-e0706aa01eb4",
@@ -99,6 +100,20 @@ class SharedObjectStore {
         return this.autoSend;
     }
 
+    isFakeConnected() {
+        return this.fakeConnected;
+    }
+    fakeConnect() {
+        this.fakeConnected = true;
+        this._fireChange();
+    }
+    fakeDisconnect() {
+        this.fakeConnected = false;
+        this._fireChange();
+    }
+    isRealConnected() {
+        return true;
+    }
     sendToNetwork() {
         if (this.autoSend) {
             this.flushToNetwork();
@@ -108,6 +123,10 @@ class SharedObjectStore {
     }
     flushToNetwork() {
         console.log("sending future changes", this._future.length);
+        if(!this.fakeConnected) {
+            console.log('not connected. cant flush');
+            return;
+        }
         //send to the network
         this.pubnub.publish({
             channel: CHANGE_CHANNEL,

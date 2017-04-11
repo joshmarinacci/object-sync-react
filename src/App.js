@@ -34,12 +34,12 @@ class App extends Component {
     }
 
     connect() {
-        this.store.setAutoSendEnabled(true);
+        this.store.fakeConnect();
         this.store.flushToNetwork();
     }
 
     disconnect() {
-        this.store.setAutoSendEnabled(false);
+        this.store.fakeDisconnect();
     }
 
     createRect() {
@@ -86,6 +86,8 @@ class App extends Component {
                 <div>present changes = {this.store.getPresentCount()}</div>
                 <div>past changes = {this.store.getPastCount()}</div>
                 <div>auto send status = {this.store.isAutoSendEnabled()?"true":"false"}</div>
+                <div>network fake connected {this.store.isFakeConnected()?"true":"false"}</div>
+                <div>network real connected {this.store.isRealConnected()?"true":"false"}</div>
                 <div>doc = {this.store._doc.join("  ")}</div>
                 <ul>{root}</ul>
             </div>
