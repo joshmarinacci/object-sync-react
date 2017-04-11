@@ -14,6 +14,21 @@ class App extends Component {
         this.store.onChange((view)=>{
             this.setState({view:view});
         });
+
+        this.drag_handler = (e)=>{
+            if(this.state.pressed && this.state.selected !== null) {
+                var dx = e.clientX - this.state.px;
+                var dy = e.clientY - this.state.py;
+                var s = this.state.selected;
+                this.store.setProperty(s.props.x.id, s.props.x.value+dx,'number');
+                this.store.setProperty(s.props.y.id, s.props.y.value+dy,'number');
+            }
+        };
+        this.release_handler = (e)=>{
+            this.setState({pressed:false});
+            document.removeEventListener('mousemove',this.drag_handler);
+            document.removeEventListener('mouseup',this.release_handler);
+        };
     }
     move() {
         var store = SharedObjectStore.get();
@@ -95,9 +110,7 @@ class App extends Component {
     }
 
     renderToSVG(view) {
-        return <svg
-            onMouseUp={this.clearMouse.bind(this)}
-        >{
+        return <svg>{
         view.values.map((node,i) => {
             var clss = "";
             if(this.state.selected) {
@@ -111,38 +124,19 @@ class App extends Component {
                 x={node.props.x.value}
                 y={node.props.y.value}
                 width="50px" height="50px" fill="red"
-                onClick={this.clickRect.bind(this,node)}
-
                 onMouseDown={this.pressRect.bind(this,node)}
-                onMouseMove={this.dragRect.bind(this,node)}
-                onMouseUp={this.releaseRect.bind(this,node)}
             />
         })}</svg>;
     }
-    clickRect(node,e) {
-        this.setState({
-            selected:node
-        })
-    }
 
     pressRect(node,e) {
-        this.setState({pressed:true, px: e.clientX, py: e.clientY});
+        this.setState({pressed:true, px: e.clientX, py: e.clientY, selected: node});
+        document.addEventListener('mousemove',this.drag_handler);
+        document.addEventListener('mouseup',this.release_handler)
     }
-    dragRect(node,e) {
-        if(this.state.pressed === true) {
-            var dx = e.clientX - this.state.px;
-            var dy = e.clientY - this.state.py;
-            this.store.setProperty(node.props.x.id, node.props.x.value+dx,'number');
-            this.store.setProperty(node.props.y.id, node.props.y.value+dy,'number');
-            this.setState({px: e.clientX, py: e.clientY});
 
-        }
-    }
-    releaseRect(node,e) {
-        this.setState({pressed:false});
-    }
     clearMouse() {
-        this.setState({pressed:false, px:0, py:0});
+        this.setState({pressed:false, px:0, py:0, selected:null});
     }
 }
 
