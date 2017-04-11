@@ -10,7 +10,7 @@
 //    { propid:'root', type:'array', value:['rect']}
 //];
 
-const DOC_PREFIX = "randomdoc8_";
+const DOC_PREFIX = "randomdoc14_";
 const DOC_CHANNEL = DOC_PREFIX+"document";
 const CHANGE_CHANNEL = DOC_PREFIX+"changes";
 
@@ -25,6 +25,7 @@ class SharedObjectStore {
         this._present = [];
         this._future = [];
         this._doc = [];
+        this.autoSend = true;
 
         this.pubnub = new PubNub({
             publishKey:"pub-c-119910eb-4bfc-4cfe-93c2-e0706aa01eb4",
@@ -86,18 +87,34 @@ class SharedObjectStore {
         this.listeners.forEach(cb => cb(view));
     }
 
+
+    setAutoSendEnabled(enabled) {
+        this.autoSend = enabled;
+    }
+
+    isAutoSendEnabled() {
+        return this.autoSend;
+    }
+
     sendToNetwork() {
-        console.log("sending future changes",this._future);
+        if (this.autoSend) {
+            this.flushToNetwork();
+        } else {
+            //console.log("autosend is disabled. not sending");
+        }
+    }
+    flushToNetwork() {
+        console.log("sending future changes", this._future.length);
         //send to the network
         this.pubnub.publish({
-            channel:CHANGE_CHANNEL,
+            channel: CHANGE_CHANNEL,
             message: {
                 changes: this._future
             }
         });
 
         //move all items the present buffer
-        this._future.forEach((change)=>{
+        this._future.forEach((change)=> {
             this._present.push(change);
         });
         this._future = [];
@@ -113,6 +130,9 @@ class SharedObjectStore {
             });
             var view = this.calculateCurrentView();
             this.listeners.forEach(cb => cb(view));
+        }
+        if(env.channel === DOC_CHANNEL) {
+            console.log("got some doc changes",env);
         }
     }
 
@@ -134,24 +154,19 @@ class SharedObjectStore {
         var history = this._past.concat(this._future).reverse();
         return history.find((p)=>p.propid === propid);
     }
-    findAllProperties() {
-        console.log("current doc is ",this._doc);
-        return this._doc.map((propid)=>{
-            return this.getProperty(propid)
-        });
-    }
+
     setProperty(propid,value,type) {
         var existing = this._future.find((p)=>p.propid == propid);
         if(existing) {
             existing.value = value;
-            this._fireChange();
-            return;
+        } else {
+            this._future.push(({
+                propid: propid,
+                value: value,
+                type: type
+            }));
         }
-        this._future.push(({
-            propid:propid,
-            value:value,
-            type:type
-        }));
+        this.sendToNetwork();
         this._fireChange();
     }
     deleteProperty(propid) {
@@ -202,12 +217,11 @@ class SharedObjectStore {
         return rt;
     }
 
-
-    createMap(value) {
-        var propid = this._generateRandomIdWithPrefix('map');
+    createProp(value, type) {
+        var propid = this._generateRandomIdWithPrefix(type);
         var prop = {
             propid: propid,
-            type: 'map',
+            type: type,
             value: value
         };
         this._future.push(prop);
@@ -220,40 +234,15 @@ class SharedObjectStore {
         });
         return prop;
     }
-    createNumber(value) {
-        var propid = this._generateRandomIdWithPrefix('number');
-        var prop = {
-            propid:propid,
-            value:value,
-            type:'number'
-        };
-        this._future.push(prop);
-        this._doc.push(propid);
-        this.pubnub.publish({
-            channel:DOC_CHANNEL,
-            message: {
-                props: this._doc
-            }
-        });
-        return prop;
-    }
 
+    createMap(value) {
+        return this.createProp(value, "map");
+    }
+    createNumber(value) {
+        return this.createProp(value, "number");
+    }
     createString(value) {
-        var propid = this._generateRandomIdWithPrefix('string');
-        var prop = {
-            propid:propid,
-            value:value,
-            type:'string'
-        };
-        this._future.push(prop);
-        this._doc.push(propid);
-        this.pubnub.publish({
-            channel:DOC_CHANNEL,
-            message: {
-                props: this._doc
-            }
-        });
-        return prop;
+        return this.createProp(value, "string");
     }
 
     _generateRandomIdWithPrefix(prefix) {

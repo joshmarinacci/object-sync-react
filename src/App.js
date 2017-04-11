@@ -28,22 +28,20 @@ class App extends Component {
             this.setState({pressed:false});
             document.removeEventListener('mousemove',this.drag_handler);
             document.removeEventListener('mouseup',this.release_handler);
+            this.store.setAutoSendEnabled(true);
+            this.store.flushToNetwork();
         };
     }
-    move() {
-        var store = SharedObjectStore.get();
-        var prop = store.getProperty('x1');
-        store.setProperty('x1',prop.value+10,'number');
+
+    connect() {
+        this.store.setAutoSendEnabled(true);
+        this.store.flushToNetwork();
     }
-    moveBack() {
-        var store = SharedObjectStore.get();
-        var prop = store.getProperty('x1');
-        store.setProperty('x1',prop.value-10,'number');
+
+    disconnect() {
+        this.store.setAutoSendEnabled(false);
     }
-    send() {
-        var store = SharedObjectStore.get();
-        store.sendToNetwork();
-    }
+
     createRect() {
         //make the rect and parts
         var x = this.store.createNumber(0);
@@ -78,9 +76,8 @@ class App extends Component {
         return (
             <div>
                 <div>
-                    <button onClick={this.moveBack.bind(this)}>move left</button>
-                    <button onClick={this.move.bind(this)}>move right</button>
-                    <button onClick={this.send.bind(this)}>send</button>
+                    <button onClick={this.connect.bind(this)}>connect</button>
+                    <button onClick={this.disconnect.bind(this)}>disconnect</button>
                     <button onClick={this.createRect.bind(this)}>+ rect</button>
                     <button onClick={this.deleteFirstRect.bind(this)}>- rect</button>
                 </div>
@@ -88,6 +85,7 @@ class App extends Component {
                 <div>future changes = {this.store.getFutureCount()}</div>
                 <div>present changes = {this.store.getPresentCount()}</div>
                 <div>past changes = {this.store.getPastCount()}</div>
+                <div>auto send status = {this.store.isAutoSendEnabled()?"true":"false"}</div>
                 <ul>{root}</ul>
             </div>
         );
@@ -131,6 +129,7 @@ class App extends Component {
 
     pressRect(node,e) {
         this.setState({pressed:true, px: e.clientX, py: e.clientY, selected: node});
+        this.store.setAutoSendEnabled(false);
         document.addEventListener('mousemove',this.drag_handler);
         document.addEventListener('mouseup',this.release_handler)
     }
