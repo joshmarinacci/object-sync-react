@@ -19,9 +19,9 @@ the document channel
 * done: make a mouse handler to move the rectangle around by putting changes into the future buffer 
 and triggering a refresh
 
-* make future buffer coalesce events if the same propid
-* when mouse is released flush future buffer to the present buffer and network
-* add an indicator for the size of the future buffer to show when things are sending
+* done: make future buffer coalesce events if the same propid
+* done: when mouse is released flush future buffer to the present buffer and network
+* done: add an indicator for the size of the future buffer to show when things are sending
 
 * press button to disconnect from the network.
 * move the rect. should still work.
@@ -30,5 +30,4 @@ and triggering a refresh
 
 
 
-
-
+doc changes should be put into the 'future' queue as well. how to demarcate it? just a type on the event? make sure it is sent along with other property change events. queues contain history of changes as well as doc changes.  consider another property called doc which is an array of property ids. it's synced just like everything else, except that it is published a second time to the doc channel for quicker history access.
