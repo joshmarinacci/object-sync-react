@@ -71,6 +71,9 @@ class App extends Component {
                 <button onClick={this.createRect.bind(this)}>+ rect</button>
                 <button onClick={this.deleteFirstRect.bind(this)}>- rect</button>
                 {this.renderToSVG(this.state.view)}
+                <div>future changes = {this.store.getFutureCount()}</div>
+                <div>present changes = {this.store.getPresentCount()}</div>
+                <div>past changes = {this.store.getPastCount()}</div>
                 <ul>{root}</ul>
             </div>
         );

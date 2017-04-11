@@ -101,19 +101,16 @@ class SharedObjectStore {
             this._present.push(change);
         });
         this._future = [];
+        this._fireChange();
     }
 
     processIncoming(env) {
         if(env.channel === CHANGE_CHANNEL) {
-            console.log('got incoming messages', env);
-            console.log("before present is", this._present.slice());
             env.message.changes.forEach((ch)=> {
-                console.log("moving change from present to past", ch);
                 this._past.push(ch);
                 var n = this._present.findIndex(c => c.propid = ch.propid);
                 if (n >= 0) this._present.splice(n, 1);
             });
-            console.log("after present is", this._present.slice());
             var view = this.calculateCurrentView();
             this.listeners.forEach(cb => cb(view));
         }
@@ -122,6 +119,16 @@ class SharedObjectStore {
     onChange(cb) {
         this.listeners.push(cb);
     }
+    getFutureCount() {
+        return this._future.length;
+    }
+    getPresentCount() {
+        return this._present.length;
+    }
+    getPastCount() {
+        return this._past.length;
+    }
+
 
     getProperty(propid) {
         var history = this._past.concat(this._future).reverse();
@@ -134,6 +141,12 @@ class SharedObjectStore {
         });
     }
     setProperty(propid,value,type) {
+        var existing = this._future.find((p)=>p.propid == propid);
+        if(existing) {
+            existing.value = value;
+            this._fireChange();
+            return;
+        }
         this._future.push(({
             propid:propid,
             value:value,
@@ -153,7 +166,7 @@ class SharedObjectStore {
     }
 
     calculateCurrentView() {
-        var history = this._past.concat(this._future).reverse();
+        var history = this._past.concat(this._present,this._future).reverse();
 
         var root = history.find((p)=>p.propid == this.rootID);
         if(!root) {
