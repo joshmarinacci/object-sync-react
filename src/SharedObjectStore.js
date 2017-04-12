@@ -2,7 +2,7 @@
  * Created by josh on 4/10/17.
  */
 
-const DOC_PREFIX = "randomdoc19_";
+const DOC_PREFIX = "randomdoc20_";
 const DOC_CHANNEL = DOC_PREFIX+"document";
 const CHANGE_CHANNEL = DOC_PREFIX+"changes";
 
@@ -202,6 +202,7 @@ class SharedObjectStore {
                 this._setDocument(ch.value);
             })
         }
+        this._fireChange();
     }
 
     onChange(cb) {
@@ -249,6 +250,30 @@ class SharedObjectStore {
         this._fireChange();
     }
 
+    calculateObject(id) {
+        var history = this._past.concat(this._present,this._future).reverse();
+        var root = history.find((p)=>p.propid == id);
+        var rt = {
+            id:root.propid,
+            type:root.type
+        };
+        rt.props = {};
+        Object.keys(root.value).forEach((name)=>{
+            var id = root.value[name];
+            var att = history.find((pp)=>pp.propid === id);
+            if(!att) {
+                console.log("WARNING:  could not find property for ",name, id);
+            } else {
+                rt.props[name] = {
+                    name: name,
+                    id: att.propid,
+                    type: att.type,
+                    value: att.value
+                }
+            }
+        });
+        return rt;
+    }
     calculateCurrentView() {
         var history = this._past.concat(this._present,this._future).reverse();
 
@@ -266,6 +291,7 @@ class SharedObjectStore {
         };
         rt.values = root.value.map((name)=>{
             var prop = history.find((pp)=>pp.propid === name);
+            if(!prop) return null;
             var props = {};
             Object.keys(prop.value).map((name)=>{
                 var id = prop.value[name];

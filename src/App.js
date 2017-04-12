@@ -2,6 +2,51 @@ import React, { Component } from 'react';
 import './App.css';
 var SharedObjectStore = require("./SharedObjectStore");
 
+class PropInput extends Component {
+    constructor(props) {
+        super(props);
+        if(props.prop) {
+            this.state = {
+                value: props.prop.value
+            }
+        }
+    }
+    componentWillReceiveProps(nextProps) {
+        if(nextProps.prop && nextProps.prop.value != this.state.value) {
+            this.setState({
+                value: nextProps.prop.value
+            })
+        }
+    }
+    propChanged() {
+        var nval = this.refs.input.value;
+        this.setState({
+            value:nval
+        });
+    }
+    commit() {
+        var prop = this.props.prop;
+        var nval = this.state.value;
+        if(prop.type === 'number') {
+            var num = parseFloat(nval);
+            this.props.store.setProperty(prop.id, num, 'number');
+        }
+        if(prop.type === 'string') {
+            this.props.store.setProperty(prop.id, nval, 'string');
+        }
+
+    }
+
+    render() {
+        return <input ref='input'
+                      type="text"
+                      value={this.state.value}
+                      onChange={this.propChanged.bind(this)}
+                      onBlur={this.commit.bind(this)}
+        />
+    }
+}
+
 class App extends Component {
     constructor(props) {
         super(props);
@@ -63,6 +108,11 @@ class App extends Component {
 
     render() {
         var root = this.renderToTree(this.state.view);
+        if(this.state.selected) {
+            var sview = this.store.calculateObject(this.state.selected.id);
+        } else {
+            var sview = null;
+        }
         return (
             <div>
                 <div>
@@ -70,6 +120,7 @@ class App extends Component {
                     <button onClick={this.deleteFirstRect.bind(this)}>- rect</button>
                 </div>
                 {this.renderToSVG(this.state.view)}
+                {this.renderPropSheet(sview)}
                 <div>future changes = {this.store.getFutureCount()}</div>
                 <div>present changes = {this.store.getPresentCount()}</div>
                 <div>past changes = {this.store.getPastCount()}</div>
@@ -83,6 +134,9 @@ class App extends Component {
 
     renderToTree(view) {
         return view.values.map((ch,i)=>{
+            if(!ch) {
+                return <li key={i}>empty</li>;
+            }
             var props = Object.keys(ch.props).map((name,i)=>{
                 var prop = ch.props[name];
                 return <li key={i}>
@@ -99,6 +153,7 @@ class App extends Component {
     renderToSVG(view) {
         return <svg>{
         view.values.map((node,i) => {
+            if(!node) return "";
             var clss = "";
             if(this.state.selected && this.state.selected.id == node.id) clss = "selected";
             return <rect
@@ -112,6 +167,19 @@ class App extends Component {
         })}</svg>;
     }
 
+    renderPropSheet(node) {
+        if(!node) return <ul></ul>
+        return <ul>
+            {Object.keys(node.props).map((name,i) => {
+                var prop = node.props[name];
+                if(!prop) return <li key={i}></li>
+                return <li key={i}>
+                    <label>{name}</label>
+                    <PropInput prop={prop} store={this.store}/>
+                </li>
+            })}
+        </ul>
+    }
     pressRect(node,e) {
         this.setState({pressed:true, px: e.clientX, py: e.clientY, selected: node});
         this.store.setAutoSendEnabled(false);
