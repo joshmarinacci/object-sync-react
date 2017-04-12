@@ -19,6 +19,7 @@ class SharedObjectStore {
         this._doc = [];
         this.autoSend = true;
         this.fakeConnected = true;
+        this.connected = true;
 
         this.pubnub = new PubNub({
             publishKey:"pub-c-119910eb-4bfc-4cfe-93c2-e0706aa01eb4",
@@ -45,7 +46,17 @@ class SharedObjectStore {
         });
 
         this.pubnub.addListener(({
-            status: (e) => console.log(e),
+            status: (e) => {
+                console.log('status message', e);
+                if(e.category === 'PNNetworkIssuesCategory' ||
+                    e.category === 'PNNetworkDownCategory'
+                ) {
+                    this._networkDisconnected();
+                }
+                if(e.category === 'PNNetworkUpCategory') {
+                    this._networkConnected();
+                }
+            },
             message: this.processIncoming.bind(this)
         }));
         this.pubnub.subscribe({channels:[DOC_CHANNEL,CHANGE_CHANNEL]});
@@ -93,6 +104,14 @@ class SharedObjectStore {
         return this.autoSend;
     }
 
+    _networkConnected() {
+        this.connected = true;
+        this.pubnub.subscribe({channels:[DOC_CHANNEL,CHANGE_CHANNEL]});
+        this.fetchMissingMessages();
+    }
+    _networkDisconnected() {
+        this.connected = false;
+    }
     isFakeConnected() {
         return this.fakeConnected;
     }
@@ -105,7 +124,7 @@ class SharedObjectStore {
         this._fireChange();
     }
     isRealConnected() {
-        return true;
+        return this.connected;
     }
 
     fetchMissingMessages() {
@@ -123,9 +142,20 @@ class SharedObjectStore {
                         });
                     }
                 });
-                this.flushToNetwork();
+                this._resendPresent();
             });
         });
+    }
+
+    _resendPresent() {
+        console.log("resending anything from the present queue");
+        this.pubnub.publish({
+            channel: CHANGE_CHANNEL,
+            message: {
+                changes: this._present
+            }
+        });
+        this.flushToNetwork();
     }
 
     sendToNetwork() {
@@ -139,6 +169,10 @@ class SharedObjectStore {
         console.log("sending future changes", this._future.length);
         if(!this.fakeConnected) {
             console.log('not connected. cant flush');
+            return;
+        }
+        if(!this.connected) {
+            console.log("not connected. cant flush");
             return;
         }
         //send to the network

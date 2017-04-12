@@ -29,4 +29,9 @@ and triggering a refresh
 * done: should be able to move either rect, everything renders correctly
 
 
-* retrieve all changes made while off the network using history. have to reconcile. do this before flushing to the network. 
+* done: retrieve all changes made while off the network using history. have to reconcile. do this before flushing to the network. 
+* done: test it with a real network disconnection
+
+figure out how to add unit tests
+show properties of the selected rect
+switch to promises for the network actions
