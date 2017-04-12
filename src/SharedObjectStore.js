@@ -84,6 +84,7 @@ class SharedObjectStore {
         this._past = [];
         changes.forEach((msg)=>{
             msg.entry.changes.forEach((ch) => {
+                ch.timetoken = msg.timetoken;
                 this._past.push(ch);
             })
         });
@@ -105,7 +106,7 @@ class SharedObjectStore {
     }
     fakeConnect() {
         this.fakeConnected = true;
-        this._fireChange();
+        this.fetchMissingMessages();
     }
     fakeDisconnect() {
         this.fakeConnected = false;
@@ -114,6 +115,27 @@ class SharedObjectStore {
     isRealConnected() {
         return true;
     }
+
+    fetchMissingMessages() {
+        this.pubnub.history({channel:DOC_CHANNEL},(status,hist)=>{
+            var mostRecent = hist.messages.slice().pop().entry.changes;
+            this._doc = mostRecent[0].value;
+            this.pubnub.history({channel:CHANGE_CHANNEL}, (status,hist)=>{
+                var last = this._past[this._past.length-1];
+                hist.messages.forEach((m,i)=>{
+                    if(m.timetoken >= last.timetoken) {
+                        m.entry.changes.forEach((ch)=>{
+                            ch.timetoken = m.timetoken;
+                            this._past.push(ch);
+                            console.log('adding',ch);
+                        });
+                    }
+                });
+                this.flushToNetwork();
+            });
+        });
+    }
+
     sendToNetwork() {
         if (this.autoSend) {
             this.flushToNetwork();
@@ -157,6 +179,7 @@ class SharedObjectStore {
         if(env.channel === CHANGE_CHANNEL) {
             env.message.changes.forEach((ch)=> {
                 //put this in the past
+                ch.timetoken = env.timetoken;
                 this._past.push(ch);
                 //remove from present if it's there
                 var n = this._present.findIndex(c => c.propid = ch.propid);

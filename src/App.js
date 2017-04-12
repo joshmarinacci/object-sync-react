@@ -35,7 +35,6 @@ class App extends Component {
 
     connect() {
         this.store.fakeConnect();
-        this.store.flushToNetwork();
     }
 
     disconnect() {
