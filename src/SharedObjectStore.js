@@ -18,7 +18,6 @@ class SharedObjectStore {
         this._future = [];
         this._doc = [];
         this.autoSend = true;
-        this.fakeConnected = true;
         this.connected = true;
 
         this.pubnub = new PubNub({
@@ -112,17 +111,6 @@ class SharedObjectStore {
     _networkDisconnected() {
         this.connected = false;
     }
-    isFakeConnected() {
-        return this.fakeConnected;
-    }
-    fakeConnect() {
-        this.fakeConnected = true;
-        this.fetchMissingMessages();
-    }
-    fakeDisconnect() {
-        this.fakeConnected = false;
-        this._fireChange();
-    }
     isRealConnected() {
         return this.connected;
     }
@@ -167,10 +155,6 @@ class SharedObjectStore {
     }
     flushToNetwork() {
         console.log("sending future changes", this._future.length);
-        if(!this.fakeConnected) {
-            console.log('not connected. cant flush');
-            return;
-        }
         if(!this.connected) {
             console.log("not connected. cant flush");
             return;
@@ -201,7 +185,6 @@ class SharedObjectStore {
     }
 
     processIncoming(env) {
-        if(!this.fakeConnected) return console.log("Can't receive. disconnected!");
         if(env.channel === CHANGE_CHANNEL) {
             env.message.changes.forEach((ch)=> {
                 //put this in the past

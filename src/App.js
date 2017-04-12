@@ -11,9 +11,7 @@ class App extends Component {
             selected:null,
             pressed:false
         };
-        this.store.onChange((view)=>{
-            this.setState({view:view});
-        });
+        this.store.onChange((view)=> this.setState({view:view}));
 
         this.drag_handler = (e)=>{
             if(this.state.pressed && this.state.selected !== null) {
@@ -31,14 +29,7 @@ class App extends Component {
             this.store.setAutoSendEnabled(true);
             this.store.flushToNetwork();
         };
-    }
 
-    connect() {
-        this.store.fakeConnect();
-    }
-
-    disconnect() {
-        this.store.fakeDisconnect();
     }
 
     createRect() {
@@ -75,8 +66,6 @@ class App extends Component {
         return (
             <div>
                 <div>
-                    <button onClick={this.connect.bind(this)}>connect</button>
-                    <button onClick={this.disconnect.bind(this)}>disconnect</button>
                     <button onClick={this.createRect.bind(this)}>+ rect</button>
                     <button onClick={this.deleteFirstRect.bind(this)}>- rect</button>
                 </div>
@@ -85,7 +74,6 @@ class App extends Component {
                 <div>present changes = {this.store.getPresentCount()}</div>
                 <div>past changes = {this.store.getPastCount()}</div>
                 <div>auto send status = {this.store.isAutoSendEnabled()?"true":"false"}</div>
-                <div>network fake connected {this.store.isFakeConnected()?"true":"false"}</div>
                 <div>network real connected {this.store.isRealConnected()?"true":"false"}</div>
                 <div>doc = {this.store._doc.join("  ")}</div>
                 <ul>{root}</ul>
@@ -94,7 +82,7 @@ class App extends Component {
     }
 
     renderToTree(view) {
-        var nodes = view.values.map((ch,i)=>{
+        return view.values.map((ch,i)=>{
             var props = Object.keys(ch.props).map((name,i)=>{
                 var prop = ch.props[name];
                 return <li key={i}>
@@ -106,18 +94,13 @@ class App extends Component {
             });
             return <li key={i}> id = {ch.id} <ul>{props}</ul></li>
         });
-        return nodes;
     }
 
     renderToSVG(view) {
         return <svg>{
         view.values.map((node,i) => {
             var clss = "";
-            if(this.state.selected) {
-                if(this.state.selected.id == node.id) {
-                    clss = "selected";
-                }
-            }
+            if(this.state.selected && this.state.selected.id == node.id) clss = "selected";
             return <rect
                 key={i}
                 className={clss}
@@ -134,10 +117,6 @@ class App extends Component {
         this.store.setAutoSendEnabled(false);
         document.addEventListener('mousemove',this.drag_handler);
         document.addEventListener('mouseup',this.release_handler)
-    }
-
-    clearMouse() {
-        this.setState({pressed:false, px:0, py:0, selected:null});
     }
 }
 
