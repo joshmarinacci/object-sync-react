@@ -2,14 +2,6 @@
  * Created by josh on 4/10/17.
  */
 
-//var INITIAL_DOC_STATE = ["root","rect","x","y"];
-//var INITIAL_CHANGES = [
-//    { propid:'x1', value:55, type:'number' },
-//    { propid:'y1', value:35, type:'number' },
-//    { propid:'rect', type:'map', value:{x:'x1',y:'y1'}},
-//    { propid:'root', type:'array', value:['rect']}
-//];
-
 const DOC_PREFIX = "randomdoc19_";
 const DOC_CHANNEL = DOC_PREFIX+"document";
 const CHANGE_CHANNEL = DOC_PREFIX+"changes";
@@ -150,12 +142,14 @@ class SharedObjectStore {
             return;
         }
         //send to the network
-        this.pubnub.publish({
-            channel: CHANGE_CHANNEL,
-            message: {
-                changes: this._future
-            }
-        });
+        if(this._future.length > 0) {
+            this.pubnub.publish({
+                channel: CHANGE_CHANNEL,
+                message: {
+                    changes: this._future
+                }
+            });
+        }
         var doc_changes = this._future.filter((ch)=>ch.propid === 'doc');
         if(doc_changes.length > 0) {
             this.pubnub.publish({
@@ -167,9 +161,7 @@ class SharedObjectStore {
         }
 
         //move all items the present buffer
-        this._future.forEach((change)=> {
-            this._present.push(change);
-        });
+        this._present = this._present.concat(this._future);
         this._future = [];
         this._fireChange();
     }
@@ -248,7 +240,7 @@ class SharedObjectStore {
             return {
                 id:'root',
                 type:'array',
-                values:[],
+                values:[]
             }
         }
         var rt = {
