@@ -8,12 +8,13 @@
   "dependencies": {
     "pubnub": "^4.8.0",
     "react": "^15.5.3",
-    "react-dom": "^15.5.3"
+    "react-dom": "^15.5.3",
+    "tape": "^4.6.3"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
+    "test": "node tests/new_version",
     "eject": "react-scripts eject"
   }
 }

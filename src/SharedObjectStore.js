@@ -8,7 +8,7 @@ const CHANGE_CHANNEL = DOC_PREFIX+"changes";
 
 var _store = null;
 
-import PubNub from "pubnub";
+var PubNub = require("pubnub");
 
 class SharedObjectStore {
     constructor() {
@@ -17,6 +17,7 @@ class SharedObjectStore {
         this._present = [];
         this._future = [];
         this._doc = [];
+        this._test_remote = [];
         this.autoSend = true;
         this.connected = true;
 
@@ -30,7 +31,7 @@ class SharedObjectStore {
             if(status.error) {
                 console.log("MAJOR ERROR, could not retrieve doc channel history");
             }
-            console.log(hist);
+            //console.log(hist);
             if(hist.messages.length <= 0) {
                 console.log("EMPTY history. probably a new doc");
                 return this._initNewDoc();
@@ -46,7 +47,7 @@ class SharedObjectStore {
 
         this.pubnub.addListener(({
             status: (e) => {
-                console.log('status message', e);
+                //console.log('status message', e);
                 if(e.category === 'PNNetworkIssuesCategory' ||
                     e.category === 'PNNetworkDownCategory'
                 ) {
@@ -82,7 +83,7 @@ class SharedObjectStore {
     }
 
     _initHistory(changes) {
-        console.log('history messages length',changes.length)
+        //console.log('history messages length',changes.length)
         this._past = [];
         changes.forEach((msg)=>{
             msg.entry.changes.forEach((ch) => {
@@ -187,12 +188,13 @@ class SharedObjectStore {
     processIncoming(env) {
         if(env.channel === CHANGE_CHANNEL) {
             env.message.changes.forEach((ch)=> {
+                this.processRemoteChange(ch,env.timetoken);
                 //put this in the past
-                ch.timetoken = env.timetoken;
-                this._past.push(ch);
-                //remove from present if it's there
-                var n = this._present.findIndex(c => c.propid = ch.propid);
-                if (n >= 0) this._present.splice(n, 1);
+                //ch.timetoken = env.timetoken;
+                //this._past.push(ch);
+                ////remove from present if it's there
+                //var n = this._present.findIndex(c => c.propid = ch.propid);
+                //if (n >= 0) this._present.splice(n, 1);
             });
             var view = this.calculateCurrentView();
             this.listeners.forEach(cb => cb(view));
@@ -203,6 +205,20 @@ class SharedObjectStore {
             })
         }
         this._fireChange();
+    }
+
+    processRemoteChange(ch,tt) {
+        console.log("incoming change is", ch);
+        ch.timetoken = tt;
+        //put into the past
+        this._past.push(ch);
+        //remove from present if it's there
+        var n = this._present.findIndex(c => c.propid = ch.propid);
+        if (n >= 0) this._present.splice(n, 1);
+        //if this is a doc event, update the document
+        if(ch.propid === 'doc') {
+            this._setDocument(ch.value);
+        }
     }
 
     onChange(cb) {
@@ -348,6 +364,62 @@ class SharedObjectStore {
 
     _generateRandomIdWithPrefix(prefix) {
         return prefix+"_"+Math.floor(Math.random()*1000*1000);
+    }
+
+
+    _test_remote_merge() {
+        this._test_remote.forEach((ch)=>{
+            this.processRemoteChange(ch,0);
+        });
+        this._test_remote = [];
+    }
+
+    _test_remote_setProperty(propid, value, type) {
+        this._test_remote.push({
+            propid:propid,
+            value:value,
+            type:type
+        });
+    }
+
+    _test_remote_createNumber(value) {
+        var type = 'number';
+        var propid = this._generateRandomIdWithPrefix(type);
+        var prop = {
+            propid: propid,
+            type: type,
+            value: value
+        };
+        this._test_remote.push(prop);
+
+        var d2 = this._doc.slice();
+        d2.push(prop.propid);
+        var doc_change = {
+            propid:'doc',
+            value:d2,
+            type:'array'
+        };
+        this._test_remote.push(doc_change);
+        return prop;
+    }
+
+    _test_future_to_past() {
+        this._past = this._past.concat(this._future);
+        this._future = [];
+    }
+
+
+
+    _test_dump() {
+        function da(arr) {
+            arr.forEach((ch)=> console.log(JSON.stringify(ch)));
+        }
+        console.log("Object store");
+        console.log('=== past'); da(this._past);
+        console.log("=== present"); da(this._present);
+        console.log("=== future"); da(this._future);
+        console.log('=== remote'); da(this._test_remote);
+        console.log("doc",this._doc);
     }
 }
 
