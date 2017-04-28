@@ -51,26 +51,28 @@ class App extends Component {
     constructor(props) {
         super(props);
         //this.store = new PubNubStore("test-channel-"+Math.floor(Math.random()*100000),"STORE");
-        this.store = new PubNubStore("test-channel-004","STORE");
-        this.store.on('merge', () =>  this.setState({view:this.store.getValue('r1')}));
-        this.store.on("future",() =>  this.setState({view:this.store.getValue('r1')}));
+        this.store = new PubNubStore("test-channel-005","STORE");
+        this.store.on('merge', () =>  this.setState({view:this.store.getValue('root')}));
+        this.store.on("future",() =>  this.setState({view:this.store.getValue('root')}));
         this.store.connect()
             .then(()=> {
-                var r1 = this.store.getValue('r1');
+                var r1 = this.store.getValue('root');
                 if(r1) {
-                    console.log("the rect already exists", r1);
+                    console.log("the root already exists", r1);
                 } else {
-                    console.log("no rect. must recreate");
+                    console.log("no root. must recreate");
                     return Promise.resolve()
                         .then(()=> this.store.addToFuture({id: 'x1', type: 'number', value:10, action: 'create'}))
                         .then(()=> this.store.addToFuture({id: 'y1', type: 'number', value:10, action: 'create'}))
                         .then(()=> this.store.addToFuture({id: 'r1', type: 'map', value:{}, action: 'create'}))
-                        .then(()=> this.store.addToFuture({id:'r1', action: 'insert', target: 'x1', at: 'x'}))
-                        .then(()=> this.store.addToFuture({id:'r1', action: 'insert', target: 'y1', at: 'y'}))
+                        .then(()=> this.store.addToFuture({id: 'r1', action: 'insert', target: 'x1', at: 'x'}))
+                        .then(()=> this.store.addToFuture({id: 'r1', action: 'insert', target: 'y1', at: 'y'}))
+                        .then(()=> this.store.addToFuture({id: 'root', type: 'array', value:[], action: 'create'}))
+                        .then(()=> this.store.addToFuture({id: 'root', action: 'insert', target: 'r1', at: -1}))
                 }
             })
             .then(()=>{
-                this.setState({view:this.store.getValue('r1')});
+                this.setState({view:this.store.getValue('root')});
             })
         ;
 
@@ -80,13 +82,12 @@ class App extends Component {
             selected:null,
             pressed:false
         };
-        //this.store.onChange((view)=> this.setState({view:view}));
 
         this.drag_handler = (e)=>{
             if(this.state.pressed && this.state.selected !== null) {
                 var dx = e.clientX - this.state.px;
                 var dy = e.clientY - this.state.py;
-                var obj = this.store.getObject('r1');
+                var obj = this.store.getObject(this.state.selected.id);
                 var nx = obj.value.x.value + dx;
                 var ny = obj.value.y.value + dy;
                 this.store.addToFuture({action: 'update', id: 'x1', value:nx})
@@ -139,19 +140,15 @@ class App extends Component {
     }
 
     render() {
-        var root = this.renderToTree(this.state.view);
-        //if(this.state.selected) {
-        //    var sview = this.store.calculateObject(this.state.selected.id);
-        //} else {
-            var sview = null;
-        //}
+        var root = this.renderToTree(this.store.getObject('root'),0);
+        var sview = null;
         return (
             <div>
                 <div>
                     <button onClick={this.createRect.bind(this)}>+ rect</button>
                     <button onClick={this.deleteFirstRect.bind(this)}>- rect</button>
                 </div>
-                {this.renderToSVG(this.state.view)}
+                {this.renderToSVG(this.store.getObject('root'))}
                 {this.renderPropSheet(sview)}
                 <div>future changes = {this.store.future.length}</div>
                 <div>present changes = {this.store.present.length}</div>
@@ -163,41 +160,56 @@ class App extends Component {
         );
     }
 
-    renderToTree(view) {
+    renderToTree(view,i) {
         if(!view) return "empty";
-        var props = Object.keys(view).map((key,i)=>{
-            var value = view[key];
+        //array
+        if(view.type === 'array') {
+            var chs = view.value.map((ch,i)=>this.renderToTree(ch,i));
             return <li key={i}>
-                <span>key</span> = <b>{key}</b>
-                <span>value</span> = <b>{value}</b>
+                 <b>{view.id}:{view.type}</b>
+                <ul>{chs}</ul>
             </li>
-        });
-
-        return props;
+        }
+        //array marker
+        if(view.target) {
+            return this.renderToTree(view.value,i);
+        }
+        //map
+        if(view.type === 'map') {
+            var chs = Object.keys(view.value).map((key,i)=>{
+                var ch = view.value[key];
+                return <li key={i}>{ch.id} <ul>{this.renderToTree(ch,i)}</ul></li>
+            });
+            return <li key={i}>
+                <b>{view.id}:{view.type}</b>
+                <ul>{chs}</ul>
+            </li>
+        }
+        if(view.type == 'number') {
+            return <li key={i}>
+                <b>{view.id}:{view.type}: {view.value}</b>
+                </li>
+        }
+        return "nothing";
     }
 
-    renderToSVG(view) {
-        if(!view) return <svg></svg>;
-        var rect = <rect x={view.x} y={view.y} width="50px" height="50px" fill="red"
-                         onMouseDown={this.pressRect.bind(this,view)}
-        />
-        return <svg>{rect}</svg>
-        /*
+    renderToSVG(root) {
+        if(!root) return <svg></svg>;
         return <svg>{
-        view.values.map((node,i) => {
-            if(!node) return "";
+        root.value.map((nd,i) => {
+            if(!nd) return "";
+            var node = nd.value;
             var clss = "";
             if(this.state.selected && this.state.selected.id == node.id) clss = "selected";
             return <rect
                 key={i}
                 className={clss}
-                x={node.props.x.value}
-                y={node.props.y.value}
+                x={node.value.x.value}
+                y={node.value.y.value}
                 width="50px" height="50px" fill="red"
                 onMouseDown={this.pressRect.bind(this,node)}
             />
         })}</svg>;
-        */
     }
 
     renderPropSheet(node) {
