@@ -51,7 +51,7 @@ class App extends Component {
     constructor(props) {
         super(props);
         //this.store = new PubNubStore("test-channel-"+Math.floor(Math.random()*100000),"STORE");
-        this.store = new PubNubStore("test-channel-005","STORE");
+        this.store = new PubNubStore("test-channel-006","STORE");
         this.store.on('merge', () =>  this.setState({view:this.store.getValue('root')}));
         this.store.on("future",() =>  this.setState({view:this.store.getValue('root')}));
         this.store.connect()
@@ -90,12 +90,12 @@ class App extends Component {
                 var obj = this.store.getObject(this.state.selected.id);
                 var nx = obj.value.x.value + dx;
                 var ny = obj.value.y.value + dy;
-                this.store.addToFuture({action: 'update', id: 'x1', value:nx})
-                    .then(()=> this.store.addToFuture({action:'update',id:'y1',value:ny}))
+                this.store.addToFuture({action: 'update', id: obj.value.x.id, value:nx})
+                    .then(()=> this.store.addToFuture({action:'update',id:obj.value.y.id,value:ny}))
                     .then(()=>{
                         this.setState({
                             px: e.clientX,
-                            py: e.clientY,
+                            py: e.clientY
                         });
                     });
             }
@@ -111,17 +111,15 @@ class App extends Component {
     }
 
     createRect() {
-        //make the rect and parts
-        var x = this.store.createNumber(0);
-        var y = this.store.createNumber(0);
-        var name = this.store.createString("my cool rect");
-        var rect = this.store.createMap({x: x.propid, y: y.propid, name:name.propid});
-
-        //make root
-        var root = this.store.getProperty('root');
-        var root_val = root.value.slice();
-        root_val.push(rect.propid);
-        this.store.setProperty(root.propid,root_val,'array');
+        Promise.resolve()
+            //make the rect and parts
+            .then(()=> this.store.addToFuture({id: 'x2', type: 'number', value:10, action: 'create'}))
+            .then(()=> this.store.addToFuture({id: 'y2', type: 'number', value:10, action: 'create'}))
+            .then(()=> this.store.addToFuture({id: 'r2', type: 'map', value:{}, action: 'create'}))
+            .then(()=> this.store.addToFuture({id: 'r2', action: 'insert', target: 'x2', at: 'x'}))
+            .then(()=> this.store.addToFuture({id: 'r2', action: 'insert', target: 'y2', at: 'y'}))
+            //add to root
+            .then(()=> this.store.addToFuture({id: 'root', action: 'insert', target: 'r2', at: -1}))
     }
 
     deleteFirstRect() {
@@ -225,6 +223,7 @@ class App extends Component {
             })}
         </ul>
     }
+
     pressRect(node,e) {
         this.setState({pressed:true, px: e.clientX, py: e.clientY, selected: node});
         this.store.setAutoSendEnabled(false);
