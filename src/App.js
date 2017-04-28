@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import './App.css';
-var SharedObjectStore = require("./SharedObjectStore");
+import PubNubStore from "./PubNubStore";
 
 class PropInput extends Component {
     constructor(props) {
@@ -50,21 +50,44 @@ class PropInput extends Component {
 class App extends Component {
     constructor(props) {
         super(props);
-        this.store = SharedObjectStore.get();
+        //this.store = new PubNubStore("test-channel-"+Math.floor(Math.random()*100000),"STORE");
+        this.store = new PubNubStore("test-channel-001","STORE");
+        this.store.on('merge', () =>  this.setState({view:this.store.getValue('r1')}));
+        this.store.on("future",() =>  this.setState({view:this.store.getValue('r1')}));
+        this.store.connect()
+            .then(()=> this.store.addToFuture({id: 'x1', type: 'number', value:10, action: 'create'}))
+            .then(()=> this.store.addToFuture({id: 'y1', type: 'number', value:10, action: 'create'}))
+            .then(()=> this.store.addToFuture({id: 'r1', type: 'map', value:{}, action: 'create'}))
+            .then(()=> this.store.addToFuture({id:'r1', action: 'insert', target: 'x1', at: 'x'}))
+            .then(()=> this.store.addToFuture({id:'r1', action: 'insert', target: 'y1', at: 'y'}))
+            .then(()=>{
+                this.setState({view:this.store.getValue('r1')});
+            })
+        ;
+
+
         this.state = {
-            view: this.store.calculateCurrentView(),
+            view: null,
             selected:null,
             pressed:false
         };
-        this.store.onChange((view)=> this.setState({view:view}));
+        //this.store.onChange((view)=> this.setState({view:view}));
 
         this.drag_handler = (e)=>{
             if(this.state.pressed && this.state.selected !== null) {
                 var dx = e.clientX - this.state.px;
                 var dy = e.clientY - this.state.py;
-                var s = this.state.selected;
-                this.store.setProperty(s.props.x.id, s.props.x.value+dx,'number');
-                this.store.setProperty(s.props.y.id, s.props.y.value+dy,'number');
+                var obj = this.store.getObject('r1');
+                var nx = obj.value.x.value + dx;
+                var ny = obj.value.y.value + dy;
+                this.store.addToFuture({action: 'update', id: 'x1', value:nx})
+                    .then(()=> this.store.addToFuture({action:'update',id:'y1',value:ny}))
+                    .then(()=>{
+                        this.setState({
+                            px: e.clientX,
+                            py: e.clientY,
+                        });
+                    });
             }
         };
         this.release_handler = (e)=>{
@@ -72,7 +95,7 @@ class App extends Component {
             document.removeEventListener('mousemove',this.drag_handler);
             document.removeEventListener('mouseup',this.release_handler);
             this.store.setAutoSendEnabled(true);
-            this.store.flushToNetwork();
+            this.store._publishDeferred();
         };
 
     }
@@ -108,11 +131,11 @@ class App extends Component {
 
     render() {
         var root = this.renderToTree(this.state.view);
-        if(this.state.selected) {
-            var sview = this.store.calculateObject(this.state.selected.id);
-        } else {
+        //if(this.state.selected) {
+        //    var sview = this.store.calculateObject(this.state.selected.id);
+        //} else {
             var sview = null;
-        }
+        //}
         return (
             <div>
                 <div>
@@ -121,36 +144,36 @@ class App extends Component {
                 </div>
                 {this.renderToSVG(this.state.view)}
                 {this.renderPropSheet(sview)}
-                <div>future changes = {this.store.getFutureCount()}</div>
-                <div>present changes = {this.store.getPresentCount()}</div>
-                <div>past changes = {this.store.getPastCount()}</div>
-                <div>auto send status = {this.store.isAutoSendEnabled()?"true":"false"}</div>
-                <div>network real connected {this.store.isRealConnected()?"true":"false"}</div>
-                <div>doc = {this.store._doc.join("  ")}</div>
+                <div>future changes = {this.store.future.length}</div>
+                <div>present changes = {this.store.present.length}</div>
+                <div>past changes = {this.store.past.length}</div>
+                <div>auto send status = {true?"true":"false"}</div>
+                <div>network real connected {true?"true":"false"}</div>
                 <ul>{root}</ul>
             </div>
         );
     }
 
     renderToTree(view) {
-        return view.values.map((ch,i)=>{
-            if(!ch) {
-                return <li key={i}>empty</li>;
-            }
-            var props = Object.keys(ch.props).map((name,i)=>{
-                var prop = ch.props[name];
-                return <li key={i}>
-                    name = <b>{prop.name}</b>
-                    id = <b>{prop.id}</b>
-                    type = <b>{prop.type}</b>
-                    value = <b>{prop.value}</b>
-                </li>
-            });
-            return <li key={i}> id = {ch.id} <ul>{props}</ul></li>
+        if(!view) return "empty";
+        var props = Object.keys(view).map((key,i)=>{
+            var value = view[key];
+            return <li key={i}>
+                <span>key</span> = <b>{key}</b>
+                <span>value</span> = <b>{value}</b>
+            </li>
         });
+
+        return props;
     }
 
     renderToSVG(view) {
+        if(!view) return <svg></svg>;
+        var rect = <rect x={view.x} y={view.y} width="50px" height="50px" fill="red"
+                         onMouseDown={this.pressRect.bind(this,view)}
+        />
+        return <svg>{rect}</svg>
+        /*
         return <svg>{
         view.values.map((node,i) => {
             if(!node) return "";
@@ -165,6 +188,7 @@ class App extends Component {
                 onMouseDown={this.pressRect.bind(this,node)}
             />
         })}</svg>;
+        */
     }
 
     renderPropSheet(node) {

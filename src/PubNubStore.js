@@ -13,6 +13,7 @@ class PubNubStore extends MergeStore {
         this.listeners = {};
         this.CHANNEL = channel;
         this.connected = false;
+        this.autoSend = true;
         this.pubnub = new PubNub({
             publishKey:"pub-c-119910eb-4bfc-4cfe-93c2-e0706aa01eb4",
             subscribeKey:"sub-c-19b3c544-1e22-11e7-a9ec-0619f8945a4f"
@@ -41,6 +42,11 @@ class PubNubStore extends MergeStore {
         var n = this.listeners[type].indexOf(cb);
         this.listeners[type].splice(n,1);
     }
+
+    setAutoSendEnabled(autoSend) {
+        this.autoSend = autoSend;
+    }
+
     _fire(type) {
         if(!this.listeners[type]) this.listeners[type] = [];
         this.listeners[type].forEach(cb=>cb());
@@ -126,7 +132,10 @@ class PubNubStore extends MergeStore {
             //console.log(this.name,"deferring future changes. pending = ", this.future.length);
             return Promise.resolve();
         }
-        //console.log("publishing future changes", this.future.length);
+        if(!this.autoSend) {
+            return Promise.resolve();
+        }
+        console.log("publishing future changes", this.future.length);
         //move to present
         var proms = this.future.map((ch)=>{
             return new Promise((res,rej)=>{
@@ -154,6 +163,7 @@ class PubNubStore extends MergeStore {
         //add to future
         ch.uuid = "uuid_"+Math.floor(Math.random()*1000*1000);
         super.addToFuture(ch);
+        this._fire("future");
         return this._publishDeferred();
     }
 

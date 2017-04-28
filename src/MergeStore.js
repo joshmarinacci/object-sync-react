@@ -10,7 +10,12 @@ class MergeStore {
         this.remote = [];
     }
     addToFuture(ch) {
-        this.future.push(ch);
+        var found = this.future.find((p)=>p.id == ch.id);
+        if(found) {
+            found.value = ch.value;
+        } else {
+            this.future.push(ch);
+        }
     }
     addToRemote(ch) {
         this.remote.push(ch);
