@@ -50,6 +50,7 @@ class MergeStore {
         //re-create the history of this object
         //find any sub objects for the requested id
         var matches = buf.filter((ch) => ch.id === id);
+        if(matches.length === 0) return null;
         var obj = {};
         matches.forEach((ch) => {
             if(ch.action === 'create') {
@@ -103,7 +104,7 @@ class MergeStore {
         return this.flatten(this.getObject(id));
     }
     flatten(obj) {
-        //console.log("converting",obj);
+        if(!obj) return null;
         if(obj.type === 'map') {
             var o2 = {};
             Object.keys(obj.value).forEach((key,i)=>{

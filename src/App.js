@@ -51,15 +51,24 @@ class App extends Component {
     constructor(props) {
         super(props);
         //this.store = new PubNubStore("test-channel-"+Math.floor(Math.random()*100000),"STORE");
-        this.store = new PubNubStore("test-channel-001","STORE");
+        this.store = new PubNubStore("test-channel-004","STORE");
         this.store.on('merge', () =>  this.setState({view:this.store.getValue('r1')}));
         this.store.on("future",() =>  this.setState({view:this.store.getValue('r1')}));
         this.store.connect()
-            .then(()=> this.store.addToFuture({id: 'x1', type: 'number', value:10, action: 'create'}))
-            .then(()=> this.store.addToFuture({id: 'y1', type: 'number', value:10, action: 'create'}))
-            .then(()=> this.store.addToFuture({id: 'r1', type: 'map', value:{}, action: 'create'}))
-            .then(()=> this.store.addToFuture({id:'r1', action: 'insert', target: 'x1', at: 'x'}))
-            .then(()=> this.store.addToFuture({id:'r1', action: 'insert', target: 'y1', at: 'y'}))
+            .then(()=> {
+                var r1 = this.store.getValue('r1');
+                if(r1) {
+                    console.log("the rect already exists", r1);
+                } else {
+                    console.log("no rect. must recreate");
+                    return Promise.resolve()
+                        .then(()=> this.store.addToFuture({id: 'x1', type: 'number', value:10, action: 'create'}))
+                        .then(()=> this.store.addToFuture({id: 'y1', type: 'number', value:10, action: 'create'}))
+                        .then(()=> this.store.addToFuture({id: 'r1', type: 'map', value:{}, action: 'create'}))
+                        .then(()=> this.store.addToFuture({id:'r1', action: 'insert', target: 'x1', at: 'x'}))
+                        .then(()=> this.store.addToFuture({id:'r1', action: 'insert', target: 'y1', at: 'y'}))
+                }
+            })
             .then(()=>{
                 this.setState({view:this.store.getValue('r1')});
             })

@@ -14,6 +14,7 @@ class PubNubStore extends MergeStore {
         this.CHANNEL = channel;
         this.connected = false;
         this.autoSend = true;
+        this.subscribed = false;
         this.pubnub = new PubNub({
             publishKey:"pub-c-119910eb-4bfc-4cfe-93c2-e0706aa01eb4",
             subscribeKey:"sub-c-19b3c544-1e22-11e7-a9ec-0619f8945a4f"
@@ -54,11 +55,15 @@ class PubNubStore extends MergeStore {
     _networkConnected() {
         this.connected = true;
         this._fetchMissingHistory()
+            .then(() => {
+                if(!this.subscribed) return this.connect();
+            })
             .then(() => this._publishDeferred())
             .then(()=>  this._fire('connect'))
     }
     _networkDisconnected() {
         this.connected = false;
+        this.subscribed = false;
         this._fire('disconnect');
     }
     isConnected() {
@@ -124,6 +129,7 @@ class PubNubStore extends MergeStore {
                 res(this);
             });
             this.pubnub.subscribe({channels:[this.CHANNEL]});
+            this.subscribed = true;
         });
     }
 
