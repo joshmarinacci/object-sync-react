@@ -228,20 +228,10 @@ class PubNubStore extends MergeStore {
         this.pubnub.addListener({
             status: (e) => {
                 //console.log('status message', e);
-                if(e.category === 'PNNetworkIssuesCategory' ||
-                    e.category === 'PNNetworkDownCategory'
-                ) {
-                    //this._networkDisconnected();
-                }
-                if(e.category === 'PNConnectedCategory') {
-                    this._networkConnected();
-                }
-                if(e.category === 'PNNetworkUpCategory') {
-                    this._networkConnected();
-                }
-                if(e.operation === 'PNUnsubscribeOperation') {
-                    this._networkDisconnected();
-                }
+                if(e.category === 'PNNetworkIssuesCategory' ||  e.category === 'PNNetworkDownCategory') return this._networkDisconnected();
+                if(e.category === 'PNConnectedCategory') return this._networkConnected();
+                if(e.category === 'PNNetworkUpCategory') return this._networkConnected();
+                if(e.operation === 'PNUnsubscribeOperation') return this._networkDisconnected();
             },
             message: (msg) =>{
                 msg.message.timetoken = msg.timetoken;
@@ -264,30 +254,17 @@ class PubNubStore extends MergeStore {
         this.listeners[type].forEach(cb=>cb());
     }
     _networkConnected() {
-        console.log(this.name,"connected");
         this.connected = true;
-        //check for missing history
         this._fetchMissingHistory()
             .then(() => this._publishDeferred())
-            .then(()=>{
-                this._fire('connect');
-            });
+            .then(()=>  this._fire('connect'))
     }
-
     _networkDisconnected() {
         this.connected = false;
-        console.log(this.name,'disconnected');
         this._fire('disconnect');
     }
     isConnected() {
         return this.connected;
-    }
-    _getBuffers() {
-        return {
-            past: this.past,
-            present: this.present,
-            future: this.future
-        }
     }
     _dump() {
         function da(arr) {
@@ -322,7 +299,7 @@ class PubNubStore extends MergeStore {
                         //console.log(this.name, 'already have it', m.entry);
                     }
                 });
-                this._dump();
+                //this._dump();
                 return res();
             });
         })
@@ -389,17 +366,13 @@ class PubNubStore extends MergeStore {
     }
 
     _waitUntilMerged() {
-        if(this.present.length == 0) {
-            //console.log('already up to date.');
-            return Promise.resolve();
-        }
+        if(this.present.length == 0) return Promise.resolve();
         return new Promise((res,rej)=>{
             var unsub = this.on('merge', () => {
-                //console.log(this.name,'merged. left = ', this.present.length);
                 if(this.present.length == 0) {
-                    //console.log("WAITING for merge DONE");
+                    this.off('merge',unsub);
                     res();
-                };
+                }
             })
         })
     }
@@ -415,7 +388,6 @@ class PubNubStore extends MergeStore {
     }
     shutdown() {
         this.pubnub.stop();
-        console.log("stopping pubnub");
     }
 }
 
@@ -453,8 +425,8 @@ test("live pubnub test", (t)=>{
         })
         .then(() => store._waitUntilMerged())
         .then(()=> {
-            t.equal(store._getBuffers().present.length,0,'present buffer should be empty');
-            t.equal(store._getBuffers().future.length,0, 'future buffer should be empty');
+            t.equal(store.present.length,0,'present buffer should be empty');
+            t.equal(store.future.length,0, 'future buffer should be empty');
         })
         .then(()=> store.shutdown())
         .then(()=> t.end())
@@ -476,6 +448,7 @@ test("remote merge test", (t)=>{
     var channel = "test-channel-"+Math.floor(Math.random()*100000);
     let store1 = new PubNubStore(channel,'foo');
     let store2 = new PubNubStore(channel,'bar');
+    const delay = 2000;
 
     store1.connect()
         //send all changes live
@@ -488,7 +461,7 @@ test("remote merge test", (t)=>{
         .then(()=>  store1.addToFuture({action: 'insert', target: 'b', id: 'array', at: -1}))
         .then(()=>  store1.addToFuture({action: 'insert', target: 'c', id: 'array', at: -1}))
         .then(() => store1._waitUntilMerged())
-        .then(() => sleep(1000))
+        .then(() => sleep(delay))
         .then(() => t.deepEqual(store1.getValue("array"), [1, 2, 3]))
 
         //disconnect then make a change
@@ -499,20 +472,20 @@ test("remote merge test", (t)=>{
         //another client publishes a conflicting change
         .then(() => store2.connect())
         //validate that everything is okay
-        .then(() => sleep(1000))
+        .then(() => sleep(delay))
         .then(() => t.deepEqual(store2.getValue("array"), [1, 2, 3]))
         //insert y remotely after 'b'
         .then(() => store2.addToFuture({ id: 'y', value: 8, type:'number', action:'create'}))
         .then(() => store2.addToFuture({action:'insert', target:'y', id:'array', at:'b'}))
         .then(() => store2._waitUntilMerged())
-        .then(() => sleep(1000))
+        .then(() => sleep(delay))
         .then(() => t.deepEqual(store2.getValue("array"), [1, 2, 8, 3]))
         .then(() => store2.disconnect())
 
         //reconnect the main store. everything should be resolved correctly
         .then(() => store1.connect())
         .then(() => store1._waitUntilMerged())
-        .then(() => sleep(1000))
+        .then(() => sleep(delay))
         .then(() => {
             t.deepEqual(store1.getValue("array"),[1,7,2,8,3],store1.name +" is valid");
         })
@@ -520,7 +493,7 @@ test("remote merge test", (t)=>{
         //reconnect remote store. everything should be resolved correctly
         .then(()=> store2.connect())
         .then(()=> store2._waitUntilMerged())
-        .then(()=> sleep(1000))
+        .then(()=> sleep(delay))
         .then(()=> t.deepEqual(store2.getValue("array"),[1,7,2,8,3]))
         .then(()=> store1.shutdown())
         .then(()=> store2.shutdown())
