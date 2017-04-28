@@ -149,6 +149,32 @@ test("live pubnub test", (t)=>{
         });
 });
 
+
+test("pubnub map test", (t)=>{
+    let store = new PubNubStore("test-channel-"+Math.floor(Math.random()*100000));
+    store.connect()
+        .then(()=> store.addToFuture({id: 'x1', type: 'number', value:10, action: 'create'}))
+        .then(()=> store.addToFuture({id: 'y1', type: 'number', value:10, action: 'create'}))
+        .then(()=> store.addToFuture({id: 'r1', type: 'map',    value:{}, action: 'create'}))
+        .then(()=> store.addToFuture({id:'r1',  action: 'insert', target: 'x1', at: 'x'}))
+        .then(() => store._waitUntilMerged())
+        .then(() => t.deepEqual(store.getValue("r1"), {x:10}))
+        .then(()=>{
+        })
+
+        // set x to 20
+        .then(()=> store.addToFuture({action: 'update', id: 'x1', value:20}))
+        .then(() => store._waitUntilMerged())
+        .then(() => t.deepEqual(store.getValue("r1"), {x:20}))
+
+        .then(()=> store.shutdown())
+        .then(()=> t.end())
+        .catch((e) =>{
+            console.log("crashed",e);
+            t.fail();
+        });
+});
+
 function sleep(dur) {
     return new Promise((res,rej)=>{
         setTimeout(()=>{

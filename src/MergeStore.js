@@ -40,51 +40,48 @@ class MergeStore {
          this.present = [];
          */
     }
-
-    getValue(id) {
+    getObject(id) {
         var buf = this.past.concat(this.present, this.future);
-
         //re-create the history of this object
         //find any sub objects for the requested id
         var matches = buf.filter((ch) => ch.id === id);
-        var obj = null;
-        var type = null;
+        var obj = {};
         matches.forEach((ch) => {
             if(ch.action === 'create') {
-                obj = ch.value;
-                type = ch.type;
+                obj.id = ch.id;
+                obj.value = ch.value;
+                obj.type = ch.type;
+                return;
             }
             if(ch.action === 'insert') {
-                var val = this.getValue(ch.target);
-                //console.log("inserting", ch);
-                if(type === 'map') {
-                    obj[ch.at] = val;
+                var val = this.getObject(ch.target);
+                if(obj.type === 'map') {
+                    obj.value[ch.at] = val;
                 }
-                if(type === 'array') {
-                    obj = obj.slice();
-                    var record = { target: ch.target, exists:true};
+                if(obj.type === 'array') {
+                    obj.value = obj.value.slice();
+                    var record = { target: ch.target, exists:true, value: val};
                     if(ch.at === -1) {
-                        //console.log('inserting at the end');
-                        obj.push(record);
+                        //console.log('inserting at the end', val, record);
+                        obj.value.push(record);
                     } else {
                         //console.log("inserting elsewhere");
                         var o2 = [];
-                        for(var i=0; i<obj.length; i++) {
-                            var r = obj[i];
+                        for(var i=0; i<obj.value.length; i++) {
+                            var r = obj.value[i];
                             o2.push(r);
                             if(r.target === ch.at) {
                                 //console.log("found the place");
                                 o2.push(record);
                             }
                         }
-                        obj = o2;
+                        obj.value = o2;
                     }
                 }
-                //console.log("now obj = ", obj);
             }
             if(ch.action === 'remove') {
                 //console.log("removing at", ch.at, 'value', type);
-                obj.forEach((r) => {
+                obj.value.forEach((r) => {
                     //console.log("looking at the record",r,ch.at);
                     if(r.target === ch.at) {
                         r.exists = false;
@@ -92,23 +89,40 @@ class MergeStore {
                 })
             }
             if(ch.action === 'update') {
-                obj = ch.value;
+                obj.value = ch.value;
             }
         });
-
-        if(type === 'array') {
-            //console.log("must flatten the array");
-            var o2 = [];
-            for(let i=0; i<obj.length; i++) {
-                let r = obj[i];
-                //console.log("flattening",r);
-                let val = this.getValue(r.target);
-                if(r.exists) o2.push(val);
-            }
-            obj = o2;
-            //console.log("final array", obj);
+        return obj;
+    }
+    getValue(id) {
+        return this.flatten(this.getObject(id));
+    }
+    flatten(obj) {
+        //console.log("converting",obj);
+        if(obj.type === 'map') {
+            var o2 = {};
+            Object.keys(obj.value).forEach((key,i)=>{
+                var val = obj.value[key];
+                //console.log("looking at",key);
+                o2[key] = this.flatten(val);
+            });
+            return o2;
         }
-
+        if(obj.type === 'array') {
+            var a2 = [];
+            //return obj.value.map((v) => v.exists).map((v)=>this.flatten(v.value));
+            obj.value.forEach((val,i) => {
+                if(val.exists === true) {
+                    a2.push(this.flatten(val.value));
+                }
+            });
+            //console.log("final value array is", a2);
+            return a2;
+        }
+        if(obj.type === 'number') {
+            return obj.value;
+        }
+        console.log("DIDNT MATCH A TYPE");
         return obj;
     }
 }
