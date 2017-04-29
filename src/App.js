@@ -1,63 +1,7 @@
-/*
-
-next up
-
-turn on prop sheet again
-//make delete rect work again
-
- */
 import React, { Component } from 'react';
 import './App.css';
 import PubNubStore from "./PubNubStore";
-
-class PropInput extends Component {
-    constructor(props) {
-        super(props);
-        if(props.prop) {
-            this.state = {
-                value: props.prop.value
-            }
-        }
-    }
-    componentWillReceiveProps(nextProps) {
-        if(nextProps.prop && nextProps.prop.value != this.state.value) {
-            this.setState({
-                value: nextProps.prop.value
-            })
-        }
-    }
-    propChanged() {
-        var nval = this.refs.input.value;
-        this.setState({
-            value:nval
-        });
-    }
-    commit() {
-        var prop = this.props.prop;
-        var nval = this.state.value;
-        if(prop.type === 'number') {
-            var num = parseFloat(nval);
-            this.props.store.updateValue(prop,num);
-        }
-        if(prop.type === 'string') {
-            this.props.store.updateValue(prop,nval);
-        }
-
-    }
-    keypressed(e) {
-        if(e.keyCode === 13) return this.commit();
-    }
-
-    render() {
-        return <input ref='input'
-                      type="text"
-                      value={this.state.value}
-                      onChange={this.propChanged.bind(this)}
-                      onKeyDown={this.keypressed.bind(this)}
-                      onBlur={this.commit.bind(this)}
-        />
-    }
-}
+import PropInput from "./PropInput";
 
 class App extends Component {
     constructor(props) {
@@ -69,10 +13,7 @@ class App extends Component {
         this.store.connect()
             .then(()=> {
                 var r1 = this.store.getValue('root');
-                if(r1) {
-                    console.log("the root already exists", r1);
-                } else {
-                    console.log("no root. must recreate");
+                if(!r1) {
                     return Promise.resolve()
                         .then(()=> this.store.addToFuture({id: 'x1', type: 'number', value:10, action: 'create'}))
                         .then(()=> this.store.addToFuture({id: 'y1', type: 'number', value:10, action: 'create'}))
@@ -104,12 +45,7 @@ class App extends Component {
                 var ny = obj.value.y.value + dy;
                 this.store.addToFuture({action: 'update', id: obj.value.x.id, value:nx})
                     .then(()=> this.store.addToFuture({action:'update',id:obj.value.y.id,value:ny}))
-                    .then(()=>{
-                        this.setState({
-                            px: e.clientX,
-                            py: e.clientY
-                        });
-                    });
+                    .then(()=> this.setState({ px: e.clientX, py: e.clientY }))
             }
         };
         this.release_handler = (e)=>{
@@ -152,7 +88,6 @@ class App extends Component {
     }
 
     render() {
-        var root = this.renderToTree(this.store.getObject('root'),0);
         return (
             <div>
                 <div>
@@ -166,7 +101,7 @@ class App extends Component {
                 <div>past changes = {this.store.past.length}</div>
                 <div>auto send status = {true?"true":"false"}</div>
                 <div>network real connected {true?"true":"false"}</div>
-                <ul>{root}</ul>
+                <ul>{this.renderToTree(this.store.getObject('root'),0)}</ul>
             </div>
         );
     }
