@@ -86,7 +86,6 @@ class MergeStore {
                 }
             }
             if(ch.action === 'remove') {
-                //console.log("removing at", ch.at, 'value', type);
                 obj.value.forEach((r) => {
                     //console.log("looking at the record",r,ch.at);
                     if(r.target === ch.at) {

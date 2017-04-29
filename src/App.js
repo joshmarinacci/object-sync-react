@@ -1,3 +1,11 @@
+/*
+
+next up
+
+turn on prop sheet again
+//make delete rect work again
+
+ */
 import React, { Component } from 'react';
 import './App.css';
 import PubNubStore from "./PubNubStore";
@@ -134,12 +142,7 @@ class App extends Component {
         var rect = this.state.selected;
         if(rect) {
             //remove rect from the doc stream
-            this.store.deleteProperty(rect.id);
-            //remove rect from the root
-            var root = this.store.getProperty('root');
-            var root_val = root.value.slice();
-            root_val = root_val.filter((id) => id!=rect.id);
-            this.store.setProperty(root.propid,root_val,'array');
+            this.store.addToFuture({action:'remove',id:'root',at:rect.id});
             this.setState({selected:null})
         }
     }
@@ -177,7 +180,7 @@ class App extends Component {
         }
         //array marker
         if(view.target) {
-            return this.renderToTree(view.value,i);
+            return <b key={i}>{view.exists?"exists":"deleted"} {this.renderToTree(view.value,i)}</b>;
         }
         //map
         if(view.type === 'map') {
@@ -203,6 +206,7 @@ class App extends Component {
         return <svg>{
         root.value.map((nd,i) => {
             if(!nd) return "";
+            if(nd.exists === false) return "";
             var node = nd.value;
             var clss = "";
             if(this.state.selected && this.state.selected.id == node.id) clss = "selected";
