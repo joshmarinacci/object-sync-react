@@ -141,7 +141,7 @@ class PubNubStore extends MergeStore {
         if(!this.autoSend) {
             return Promise.resolve();
         }
-        console.log("publishing future changes", this.future.length);
+        //console.log("publishing future changes", this.future.length);
         //move to present
         var proms = this.future.map((ch)=>{
             return new Promise((res,rej)=>{
@@ -222,6 +222,13 @@ class PubNubStore extends MergeStore {
             target:target.id,
             at:position
         })
+    }
+    updateValue(prop, value) {
+        return this.addToFuture({
+            action: 'update',
+            id: prop.id,
+            value:value
+        });
     }
 }
 

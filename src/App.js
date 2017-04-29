@@ -37,12 +37,15 @@ class PropInput extends Component {
         var nval = this.state.value;
         if(prop.type === 'number') {
             var num = parseFloat(nval);
-            this.props.store.setProperty(prop.id, num, 'number');
+            this.props.store.updateValue(prop,num);
         }
         if(prop.type === 'string') {
-            this.props.store.setProperty(prop.id, nval, 'string');
+            this.props.store.updateValue(prop,nval);
         }
 
+    }
+    keypressed(e) {
+        if(e.keyCode === 13) return this.commit();
     }
 
     render() {
@@ -50,6 +53,7 @@ class PropInput extends Component {
                       type="text"
                       value={this.state.value}
                       onChange={this.propChanged.bind(this)}
+                      onKeyDown={this.keypressed.bind(this)}
                       onBlur={this.commit.bind(this)}
         />
     }
@@ -59,7 +63,7 @@ class App extends Component {
     constructor(props) {
         super(props);
         //this.store = new PubNubStore("test-channel-"+Math.floor(Math.random()*100000),"STORE");
-        this.store = new PubNubStore("test-channel-011","STORE");
+        this.store = new PubNubStore("test-channel-012","STORE");
         this.store.on('merge', () =>  this.setState({view:this.store.getValue('root')}));
         this.store.on("future",() =>  this.setState({view:this.store.getValue('root')}));
         this.store.connect()
@@ -149,7 +153,6 @@ class App extends Component {
 
     render() {
         var root = this.renderToTree(this.store.getObject('root'),0);
-        var sview = null;
         return (
             <div>
                 <div>
@@ -157,7 +160,7 @@ class App extends Component {
                     <button onClick={this.deleteFirstRect.bind(this)}>- rect</button>
                 </div>
                 {this.renderToSVG(this.store.getObject('root'))}
-                {this.renderPropSheet(sview)}
+                {this.renderPropSheet(this.state.selected)}
                 <div>future changes = {this.store.future.length}</div>
                 <div>present changes = {this.store.present.length}</div>
                 <div>past changes = {this.store.past.length}</div>
@@ -224,8 +227,8 @@ class App extends Component {
     renderPropSheet(node) {
         if(!node) return <ul></ul>
         return <ul>
-            {Object.keys(node.props).map((name,i) => {
-                var prop = node.props[name];
+            {Object.keys(node.value).map((name,i) => {
+                var prop = node.value[name];
                 if(!prop) return <li key={i}></li>
                 return <li key={i}>
                     <label>{name}</label>
