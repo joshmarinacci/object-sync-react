@@ -51,7 +51,7 @@ class App extends Component {
     constructor(props) {
         super(props);
         //this.store = new PubNubStore("test-channel-"+Math.floor(Math.random()*100000),"STORE");
-        this.store = new PubNubStore("test-channel-006","STORE");
+        this.store = new PubNubStore("test-channel-011","STORE");
         this.store.on('merge', () =>  this.setState({view:this.store.getValue('root')}));
         this.store.on("future",() =>  this.setState({view:this.store.getValue('root')}));
         this.store.connect()
@@ -111,15 +111,22 @@ class App extends Component {
     }
 
     createRect() {
-        Promise.resolve()
-            //make the rect and parts
-            .then(()=> this.store.addToFuture({id: 'x2', type: 'number', value:10, action: 'create'}))
-            .then(()=> this.store.addToFuture({id: 'y2', type: 'number', value:10, action: 'create'}))
-            .then(()=> this.store.addToFuture({id: 'r2', type: 'map', value:{}, action: 'create'}))
-            .then(()=> this.store.addToFuture({id: 'r2', action: 'insert', target: 'x2', at: 'x'}))
-            .then(()=> this.store.addToFuture({id: 'r2', action: 'insert', target: 'y2', at: 'y'}))
-            //add to root
-            .then(()=> this.store.addToFuture({id: 'root', action: 'insert', target: 'r2', at: -1}))
+        var root = this.store.getObject('root');
+        Promise.all([
+            this.store.createNumber(10),
+            this.store.createNumber(10),
+            this.store.createMap()
+            ]).then((props)=>{
+            var x = props[0];
+            var y = props[1];
+            var r = props[2];
+            return Promise.resolve()
+                .then(()=> this.store.insertAt(r,x,'x'))
+                .then(()=> this.store.insertAt(r,y,'y'))
+                .then(()=> this.store.insertAt(root,r,-1))
+        })
+        .catch((e)=>console.log(e));
+
     }
 
     deleteFirstRect() {
@@ -176,7 +183,7 @@ class App extends Component {
         if(view.type === 'map') {
             var chs = Object.keys(view.value).map((key,i)=>{
                 var ch = view.value[key];
-                return <li key={i}>{ch.id} <ul>{this.renderToTree(ch,i)}</ul></li>
+                return <li key={i}>{key} <ul>{this.renderToTree(ch,i)}</ul></li>
             });
             return <li key={i}>
                 <b>{view.id}:{view.type}</b>

@@ -160,9 +160,9 @@ class PubNubStore extends MergeStore {
                 });
             });
         });
+        this.future = [];
         return Promise.all(proms).then(()=>{
             //console.log('all future posts sent to the present', this.future.length);
-            this.future = [];
         });
     }
     addToFuture(ch) {
@@ -170,7 +170,7 @@ class PubNubStore extends MergeStore {
         ch.uuid = "uuid_"+Math.floor(Math.random()*1000*1000);
         super.addToFuture(ch);
         this._fire("future");
-        return this._publishDeferred();
+        return this._publishDeferred().then(()=> ch);
     }
 
     _waitUntilMerged() {
@@ -196,6 +196,32 @@ class PubNubStore extends MergeStore {
     }
     shutdown() {
         this.pubnub.stop();
+    }
+
+
+    createNumber(value) {
+        return this.addToFuture({
+            id : "id_"+Math.floor(Math.random()*1000*1000),
+            type:'number',
+            action:'create',
+            value:value
+        })
+    }
+    createMap() {
+        return this.addToFuture({
+            id : "id_"+Math.floor(Math.random()*1000*1000),
+            type:'map',
+            action:'create',
+            value:{}
+        })
+    }
+    insertAt(map, target, position) {
+        return this.addToFuture({
+            id:map.id,
+            action:'insert',
+            target:target.id,
+            at:position
+        })
     }
 }
 
